@@ -1,0 +1,12 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="192" height="192" rx="44" fill="url(#bg)"/>
+  <rect x="14" y="14" width="164" height="164" rx="34" fill="#FFFCEF" stroke="#F2C1B1" stroke-width="4"/>
+  <text x="96" y="82" text-anchor="middle" font-size="44">🍋</text>
+  <text x="96" y="122" text-anchor="middle" font-family="Trebuchet MS, sans-serif" font-size="34" font-weight="900" fill="#2A1F18">OK</text>
+  <defs>
+    <linearGradient id="bg" x1="96" y1="0" x2="96" y2="192" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF9B8"/>
+      <stop offset="1" stop-color="#FFF5BF"/>
+    </linearGradient>
+  </defs>
+</svg>
