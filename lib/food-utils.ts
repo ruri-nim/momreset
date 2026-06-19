@@ -4,6 +4,7 @@ export function createMealRecord(
   item: FoodSearchItem,
   portionMultiplier = 1,
   category: MealCategory = "점심",
+  consumedGrams?: number,
 ): MealRecord {
   return {
     id: `${item.id}-${Date.now()}`,
@@ -15,6 +16,7 @@ export function createMealRecord(
     servingSize: item.servingSize,
     hydrationFriendly: item.hydrationFriendly,
     portionMultiplier,
+    consumedGrams,
     category,
     source: "search",
     loggedAt: new Date().toISOString(),

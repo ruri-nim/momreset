@@ -21,11 +21,13 @@ export default function FoodSearchDialog({
 }: FoodSearchDialogProps) {
   const mealCategories: MealCategory[] = ["아침", "점심", "저녁", "간식"];
   const [query, setQuery] = useState("");
-  const [portionMultiplier, setPortionMultiplier] = useState(1);
   const [mealCategory, setMealCategory] = useState<MealCategory>("점심");
   const [results, setResults] = useState<FoodSearchItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedItem, setSelectedItem] = useState<FoodSearchItem | null>(null);
+  const [selectedPortionMultiplier, setSelectedPortionMultiplier] = useState(1);
+  const [selectedConsumedGrams, setSelectedConsumedGrams] = useState("");
 
   const helperText = useMemo(() => {
     if (!query.trim()) return "한식 위주로 검색해보세요. 예: 미역국, 계란후라이, 소고기죽";
@@ -36,6 +38,12 @@ export default function FoodSearchDialog({
   }, [errorMessage, loading, query, results.length]);
 
   async function handleSearch() {
+    if (!query.trim()) {
+      setResults([]);
+      setErrorMessage("음식 이름을 먼저 입력해주세요.");
+      return;
+    }
+
     setLoading(true);
     setErrorMessage("");
     try {
@@ -53,8 +61,26 @@ export default function FoodSearchDialog({
     }
   }
 
-  function handleAdd(item: FoodSearchItem) {
-    onAddMeal(createMealRecord(item, portionMultiplier, mealCategory));
+  function handleStartAdd(item: FoodSearchItem) {
+    setSelectedItem(item);
+    setSelectedPortionMultiplier(1);
+    setSelectedConsumedGrams("");
+  }
+
+  function handleConfirmAdd() {
+    if (!selectedItem) {
+      return;
+    }
+
+    onAddMeal(
+      createMealRecord(
+        selectedItem,
+        selectedPortionMultiplier,
+        mealCategory,
+        selectedConsumedGrams ? Number(selectedConsumedGrams) : undefined,
+      ),
+    );
+    setSelectedItem(null);
     onClose();
   }
 
@@ -71,54 +97,111 @@ export default function FoodSearchDialog({
             value={query}
             placeholder="음식 이름을 입력해주세요"
             onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                void handleSearch();
+              }
+            }}
           />
           <Button onClick={handleSearch}>검색</Button>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="min-w-[140px]">
-            <span className="mb-2 block text-sm text-muted">식사 시간</span>
-            <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
-              {mealCategories.map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={() => setMealCategory(category)}
-                  className="rounded-full border px-3 py-2 text-sm font-medium transition"
-                  style={{
-                    borderColor:
-                      mealCategory === category
-                        ? "rgba(16,185,129,0.36)"
-                        : "rgb(var(--color-line) / 0.92)",
-                    background:
-                      mealCategory === category
-                        ? "rgba(16,185,129,0.12)"
-                        : "var(--card-background-strong)",
-                    color:
-                      mealCategory === category
-                        ? "rgb(var(--color-coral))"
-                        : "var(--text-soft)",
-                  }}
-                >
-                  {category}
-                </button>
-              ))}
-            </div>
+        <div className="min-w-[140px]">
+          <span className="mb-2 block text-sm text-muted">식사 시간</span>
+          <div className="grid grid-cols-4 gap-2 sm:flex sm:flex-wrap">
+            {mealCategories.map((category) => (
+              <button
+                key={category}
+                type="button"
+                onClick={() => setMealCategory(category)}
+                className="rounded-full border px-3 py-2 text-sm font-medium transition"
+                style={{
+                  borderColor:
+                    mealCategory === category
+                      ? "rgba(16,185,129,0.36)"
+                      : "rgb(var(--color-line) / 0.92)",
+                  background:
+                    mealCategory === category
+                      ? "rgba(16,185,129,0.12)"
+                      : "var(--card-background-strong)",
+                  color:
+                    mealCategory === category
+                      ? "rgb(var(--color-coral))"
+                      : "var(--text-soft)",
+                }}
+              >
+                {category}
+              </button>
+            ))}
           </div>
+        </div>
 
-          <span className="text-sm text-muted">섭취량 배수</span>
-          <Input
-            className="max-w-28"
-            type="number"
-            min="0.5"
-            max="3"
-            step="0.5"
-            value={portionMultiplier}
-            onChange={(event) => setPortionMultiplier(Number(event.target.value))}
-          />
+        <div className="rounded-2xl bg-peach/70 px-4 py-3 text-sm leading-6 text-muted">
+          검색 결과 칼로리는 보통 <span className="font-semibold text-ink">100g / 100mL 또는 1회분 기준</span>이에요.
+          원하는 음식을 먼저 고른 뒤, 다음 단계에서 배수와 g를 적어 저장할 수 있어요.
         </div>
 
         <p className="text-sm text-muted">{helperText}</p>
+
+        {selectedItem ? (
+          <div className="rounded-[24px] border border-line bg-white px-4 py-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-muted">
+                  Add detail
+                </p>
+                <h4 className="mt-2 text-lg font-semibold text-ink">{selectedItem.name}</h4>
+                <p className="mt-1 text-xs text-muted">
+                  기준 {selectedItem.servingSize ?? "1회분"} · {selectedItem.calories} kcal
+                </p>
+              </div>
+              <Button variant="ghost" onClick={() => setSelectedItem(null)}>
+                닫기
+              </Button>
+            </div>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-ink">섭취량 배수</label>
+                <Input
+                  type="number"
+                  min="0.5"
+                  max="3"
+                  step="0.5"
+                  value={selectedPortionMultiplier}
+                  onChange={(event) => setSelectedPortionMultiplier(Number(event.target.value))}
+                />
+              </div>
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-ink">섭취량(g)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={selectedConsumedGrams}
+                  onChange={(event) => setSelectedConsumedGrams(event.target.value)}
+                  placeholder="예: 180"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl bg-peach/70 px-4 py-3 text-sm text-muted">
+              {mealCategory}으로 저장되고,
+              {` ${Math.round(selectedItem.calories * selectedPortionMultiplier)} kcal`}로 기록돼요.
+              {selectedConsumedGrams ? ` 섭취량은 ${selectedConsumedGrams}g으로 함께 남아요.` : ""}
+            </div>
+
+            <div className="mt-4 flex gap-2">
+              <Button className="flex-1" onClick={handleConfirmAdd}>
+                확인하고 저장
+              </Button>
+              <Button variant="secondary" className="flex-1" onClick={() => setSelectedItem(null)}>
+                취소
+              </Button>
+            </div>
+          </div>
+        ) : null}
 
         <div className="space-y-3">
           {results.map((item) => (
@@ -128,17 +211,33 @@ export default function FoodSearchDialog({
             >
               <div>
                 <p className="font-medium text-ink">{item.name}</p>
-                <div className="mt-1 flex items-center gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Badge>{item.calories} kcal</Badge>
+                  <Badge
+                    style={{
+                      background: "rgb(var(--color-peach) / 0.95)",
+                      color: "rgb(var(--color-ink))",
+                    }}
+                  >
+                    기준 {item.servingSize ?? "1회분"}
+                  </Badge>
+                  <Badge
+                    style={{
+                      background: "rgb(var(--color-sage) / 0.9)",
+                      color: "rgb(var(--color-coral))",
+                    }}
+                  >
+                    추가 전 기준 {item.calories} kcal
+                  </Badge>
                   <Badge>{item.protein}g 단백질</Badge>
                   {item.carbs !== undefined ? <Badge>{item.carbs}g 탄수화물</Badge> : null}
                   {item.fat !== undefined ? <Badge>{item.fat}g 지방</Badge> : null}
                 </div>
-                <p className="mt-2 text-xs text-muted">
-                  기준: {item.servingSize ?? "1회분"} · {mealCategory}
+                <p className="mt-2 text-xs leading-5 text-muted">
+                  {mealCategory}으로 기록돼요. 먼저 추가를 누르면 배수와 g를 정한 뒤 저장할 수 있어요.
                 </p>
               </div>
-              <Button variant="secondary" onClick={() => handleAdd(item)}>
+              <Button variant="secondary" onClick={() => handleStartAdd(item)}>
                 추가
               </Button>
             </div>

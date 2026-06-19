@@ -22,6 +22,7 @@ export interface MealRecord {
   servingSize?: string;
   hydrationFriendly: boolean;
   portionMultiplier: number;
+  consumedGrams?: number;
   category: MealCategory;
   source: MealSource;
   loggedAt: string;

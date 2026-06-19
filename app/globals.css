@@ -4,30 +4,32 @@
 
 :root {
   color-scheme: light;
-  --color-surface: 246 249 246;
-  --color-ink: 20 24 21;
-  --color-rose: 242 247 243;
-  --color-peach: 252 253 252;
-  --color-sage: 226 244 232;
-  --color-coral: 57 208 110;
-  --color-muted: 108 117 111;
-  --color-line: 223 231 226;
+  --color-surface: 255 251 194;
+  --color-ink: 41 31 24;
+  --color-rose: 255 245 218;
+  --color-peach: 255 251 240;
+  --color-sage: 255 238 188;
+  --color-coral: 255 128 111;
+  --color-muted: 126 98 74;
+  --color-line: 242 193 177;
   --app-background:
-    radial-gradient(circle at top left, rgba(88, 211, 132, 0.08), transparent 24%),
-    radial-gradient(circle at top right, rgba(38, 191, 103, 0.06), transparent 16%),
-    linear-gradient(180deg, #f8faf8 0%, #f3f7f4 52%, #eef4f0 100%);
+    radial-gradient(circle at 12% 10%, rgba(255, 209, 102, 0.42), transparent 18%),
+    radial-gradient(circle at 88% 12%, rgba(255, 170, 160, 0.22), transparent 16%),
+    radial-gradient(circle at 20% 88%, rgba(186, 229, 255, 0.18), transparent 18%),
+    linear-gradient(180deg, #fff9b8 0%, #fff6aa 45%, #fff5bf 100%);
   --shell-background:
-    radial-gradient(circle at top right, rgba(58, 212, 107, 0.10), transparent 28%),
-    linear-gradient(180deg, rgba(255,255,255,0.985) 0%, rgba(248,251,249,0.98) 100%);
-  --shell-border: rgba(255,255,255,0.88);
-  --card-background: rgba(255,255,255,0.95);
-  --card-background-strong: rgba(255,255,255,0.98);
-  --nav-background: rgba(255,255,255,0.92);
-  --nav-active: rgba(57, 208, 110, 0.13);
-  --nav-icon: #69776f;
-  --text-strong: #131a16;
-  --text-body: #4f5c54;
-  --text-soft: #7b877f;
+    radial-gradient(circle at top right, rgba(255, 183, 197, 0.18), transparent 24%),
+    radial-gradient(circle at bottom left, rgba(255, 229, 122, 0.24), transparent 22%),
+    linear-gradient(180deg, rgba(255,252,231,0.98) 0%, rgba(255,247,219,0.98) 100%);
+  --shell-border: rgba(255, 210, 193, 0.95);
+  --card-background: rgba(255, 251, 242, 0.95);
+  --card-background-strong: rgba(255, 253, 246, 0.985);
+  --nav-background: rgba(255, 248, 233, 0.95);
+  --nav-active: rgba(255, 186, 160, 0.3);
+  --nav-icon: #8a6650;
+  --text-strong: #2a1f18;
+  --text-body: #62493a;
+  --text-soft: #937361;
 }
 
 [data-theme="dark"] {
@@ -65,6 +67,7 @@ body {
   background: var(--app-background);
   color: rgb(var(--color-ink));
   font-family:
+    "Trebuchet MS",
     "Pretendard",
     "SUIT",
     -apple-system,
@@ -90,6 +93,48 @@ h4 {
   line-height: 1.12;
 }
 
+h1 {
+  text-shadow: 0 2px 0 rgba(255, 255, 255, 0.65);
+}
+
+.kitsch-title {
+  font-family:
+    "Comic Sans MS",
+    "Marker Felt",
+    "Chalkboard SE",
+    "Trebuchet MS",
+    "Pretendard",
+    sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 0.96;
+  text-transform: uppercase;
+  text-shadow:
+    -2px -2px 0 rgba(74, 58, 46, 0.95),
+    2px -2px 0 rgba(74, 58, 46, 0.95),
+    -2px 2px 0 rgba(74, 58, 46, 0.95),
+    2px 2px 0 rgba(74, 58, 46, 0.95),
+    5px 5px 0 rgba(74, 58, 46, 0.16);
+}
+
+.kitsch-title-soft {
+  font-family:
+    "Comic Sans MS",
+    "Marker Felt",
+    "Chalkboard SE",
+    "Trebuchet MS",
+    "Pretendard",
+    sans-serif;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 0.98;
+  text-transform: uppercase;
+  color: rgb(var(--color-ink));
+  text-shadow:
+    1px 1px 0 rgba(74, 58, 46, 0.85),
+    3px 3px 0 rgba(74, 58, 46, 0.12);
+}
+
 button,
 input {
   font: inherit;
@@ -107,4 +152,19 @@ input {
 .korean-copy {
   word-break: keep-all;
   overflow-wrap: normal;
+}
+
+.kitsch-doodle {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 5px 10px rgba(125, 92, 68, 0.12));
+}
+
+.kitsch-card {
+  position: relative;
+  overflow: hidden;
 }

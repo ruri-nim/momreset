@@ -8,10 +8,11 @@ export function Card({ className, style, ...props }: HTMLAttributes<HTMLDivEleme
         background: "var(--card-background)",
         borderColor: "rgb(var(--color-line) / 0.92)",
         color: "rgb(var(--color-ink))",
+        boxShadow: "0 12px 28px rgba(164, 116, 85, 0.12)",
         ...style,
       }}
       className={cn(
-        "rounded-[24px] border border-line bg-white/90 p-5 shadow-soft backdrop-blur",
+        "kitsch-card rounded-[28px] border border-line bg-white/90 p-5 shadow-soft backdrop-blur",
         className,
       )}
       {...props}

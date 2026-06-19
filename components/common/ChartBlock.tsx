@@ -26,6 +26,7 @@ interface ChartBlockProps {
 export default function ChartBlock({ title, subtitle, data }: ChartBlockProps) {
   const hasSparseCurrentSeries = data.filter((point) => point.value !== null).length <= 1;
   const hasTargetSeries = data.some((point) => point.target !== undefined);
+  const hasNoData = data.length === 0 || data.every((point) => point.value === null);
 
   return (
       <Card className="px-4 py-5 md:px-5 md:py-6">
@@ -40,71 +41,80 @@ export default function ChartBlock({ title, subtitle, data }: ChartBlockProps) {
           border: "1px solid rgb(var(--color-line) / 0.82)",
         }}
       >
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
-            <CartesianGrid stroke="rgb(var(--color-line) / 0.52)" strokeDasharray="4 8" vertical />
-            <XAxis
-              dataKey="label"
-              stroke="rgb(var(--color-muted))"
-              tickLine={false}
-              axisLine={false}
-              tick={{ fontSize: 11, fill: "rgb(var(--color-muted))" }}
-              tickMargin={10}
-              minTickGap={6}
-            />
-            <YAxis
-              stroke="rgb(var(--color-muted))"
-              tickLine={false}
-              axisLine={false}
-              tick={{ fontSize: 11, fill: "rgb(var(--color-muted))" }}
-              tickMargin={8}
-              width={30}
-            />
-            <Tooltip
-              formatter={(value: number | string, name: string) => {
-                const label = name === "target" ? "목표선" : "현재 값";
-                return [`${value}`, label];
-              }}
-              contentStyle={{
-                borderRadius: 18,
-                border: "1px solid rgb(var(--color-line) / 0.95)",
-                background: "var(--card-background-strong)",
-                color: "rgb(var(--color-ink))",
-                boxShadow: "0 18px 34px rgba(15, 23, 42, 0.14)",
-                fontSize: 12,
-                letterSpacing: "-0.02em",
-                padding: "10px 12px",
-              }}
-              labelStyle={{ color: "rgb(var(--color-muted))", marginBottom: 6 }}
-              cursor={{ stroke: "rgb(var(--color-coral) / 0.3)", strokeWidth: 1 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="value"
-              stroke="rgb(var(--color-coral))"
-              strokeWidth={3}
-              connectNulls={false}
-              strokeLinecap="round"
-              dot={
-                hasSparseCurrentSeries
-                  ? { r: 6, strokeWidth: 2, stroke: "rgb(var(--color-coral))", fill: "var(--card-background-strong)" }
-                  : false
-              }
-              activeDot={{ r: 7, strokeWidth: 2, stroke: "rgb(var(--color-coral))", fill: "var(--card-background-strong)" }}
-            />
-            {hasTargetSeries ? (
+        {hasNoData ? (
+          <div className="flex h-full items-center justify-center rounded-[20px] bg-white/45 text-center">
+            <div>
+              <p className="text-base font-semibold text-ink">아직 그래프에 표시할 기록이 없어요.</p>
+              <p className="mt-2 text-sm text-muted">몸무게를 한 번 저장하면 흐름이 여기부터 그려져요.</p>
+            </div>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data}>
+              <CartesianGrid stroke="rgb(var(--color-line) / 0.52)" strokeDasharray="4 8" vertical />
+              <XAxis
+                dataKey="label"
+                stroke="rgb(var(--color-muted))"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11, fill: "rgb(var(--color-muted))" }}
+                tickMargin={10}
+                minTickGap={6}
+              />
+              <YAxis
+                stroke="rgb(var(--color-muted))"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11, fill: "rgb(var(--color-muted))" }}
+                tickMargin={8}
+                width={30}
+              />
+              <Tooltip
+                formatter={(value: number | string, name: string) => {
+                  const label = name === "target" ? "목표선" : "현재 값";
+                  return [`${value}`, label];
+                }}
+                contentStyle={{
+                  borderRadius: 18,
+                  border: "1px solid rgb(var(--color-line) / 0.95)",
+                  background: "var(--card-background-strong)",
+                  color: "rgb(var(--color-ink))",
+                  boxShadow: "0 18px 34px rgba(15, 23, 42, 0.14)",
+                  fontSize: 12,
+                  letterSpacing: "-0.02em",
+                  padding: "10px 12px",
+                }}
+                labelStyle={{ color: "rgb(var(--color-muted))", marginBottom: 6 }}
+                cursor={{ stroke: "rgb(var(--color-coral) / 0.3)", strokeWidth: 1 }}
+              />
               <Line
                 type="monotone"
-                dataKey="target"
-                stroke="rgb(var(--color-muted))"
-                strokeWidth={1.8}
-                strokeDasharray="6 6"
-                dot={false}
+                dataKey="value"
+                stroke="rgb(var(--color-coral))"
+                strokeWidth={3}
+                connectNulls={false}
                 strokeLinecap="round"
+                dot={
+                  hasSparseCurrentSeries
+                    ? { r: 6, strokeWidth: 2, stroke: "rgb(var(--color-coral))", fill: "var(--card-background-strong)" }
+                    : false
+                }
+                activeDot={{ r: 7, strokeWidth: 2, stroke: "rgb(var(--color-coral))", fill: "var(--card-background-strong)" }}
               />
-            ) : null}
-          </LineChart>
-        </ResponsiveContainer>
+              {hasTargetSeries ? (
+                <Line
+                  type="monotone"
+                  dataKey="target"
+                  stroke="rgb(var(--color-muted))"
+                  strokeWidth={1.8}
+                  strokeDasharray="6 6"
+                  dot={false}
+                  strokeLinecap="round"
+                />
+              ) : null}
+            </LineChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </Card>
   );
