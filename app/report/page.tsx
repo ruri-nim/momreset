@@ -11,14 +11,26 @@ import { Input } from "@/components/ui/input";
 import { calculateDailyTargetCalories } from "@/lib/diet-app-calorie-target";
 import { formatDateLabel, isDateWithinLastDays } from "@/lib/diet-app-date";
 import {
+  loadAvoidRules,
   loadBodyWeightKg,
+  loadDoRules,
+  loadExerciseLogs,
   loadOnboardingProfile,
+  loadRuleHistory,
   loadWeightHistory,
   resetDietAppStorage,
   saveBodyWeightKg,
   saveOnboardingProfile,
   saveWeightHistory,
 } from "@/lib/diet-app-storage";
+import {
+  buildWeeklyInsightSummary,
+  generateRuleBasedWeeklyFeedback,
+  getWeeklyPatternLines,
+  type WeeklyAiFeedback,
+  type WeeklyFoodLogItem,
+  type WeeklyInsightSummary,
+} from "@/lib/weekly-feedback";
 import { getProviders, signIn, signOut, useSession } from "next-auth/react";
 import type { OnboardingProfile, WeightLogItem } from "@/types/diet-app";
 
@@ -70,6 +82,21 @@ function getTodayKey() {
   return `${year}-${month}-${day}`;
 }
 
+const FOOD_LIST_STORAGE_KEY = "food-list";
+
+function loadStoredFoods() {
+  if (typeof window === "undefined") {
+    return [] as WeeklyFoodLogItem[];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(FOOD_LIST_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as WeeklyFoodLogItem[]) : [];
+  } catch {
+    return [] as WeeklyFoodLogItem[];
+  }
+}
+
 export default function ReportPage() {
   const { data: session, status } = useSession();
   const [bodyWeightKgInput, setBodyWeightKgInput] = useState("55");
@@ -88,6 +115,11 @@ export default function ReportPage() {
   const [profileSaveMessage, setProfileSaveMessage] = useState("");
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [profileModalStep, setProfileModalStep] = useState(0);
+  const [weeklySummary, setWeeklySummary] = useState<WeeklyInsightSummary | null>(null);
+  const [weeklyPatternLines, setWeeklyPatternLines] = useState<string[]>([]);
+  const [weeklyFeedback, setWeeklyFeedback] = useState<WeeklyAiFeedback | null>(null);
+  const [weeklyFeedbackSource, setWeeklyFeedbackSource] = useState<"ai" | "fallback">("fallback");
+  const [weeklyFeedbackLoading, setWeeklyFeedbackLoading] = useState(true);
 
   useEffect(() => {
     const loadedWeight = loadBodyWeightKg();
@@ -114,6 +146,59 @@ export default function ReportPage() {
         setProviderLoadFailed(true);
       });
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const appliedProfile = loadOnboardingProfile();
+    const appliedWeightHistory = loadWeightHistory();
+    const appliedWeight = appliedWeightHistory[0]?.weightKg ?? loadBodyWeightKg();
+    const appliedGoalCalories = calculateDailyTargetCalories(appliedWeight, appliedProfile);
+    const nextSummary = buildWeeklyInsightSummary({
+      foods: loadStoredFoods(),
+      exerciseLogs: loadExerciseLogs(),
+      ruleHistory: loadRuleHistory(),
+      doRules: loadDoRules(),
+      avoidRules: loadAvoidRules(),
+      weightHistory: appliedWeightHistory,
+      profile: appliedProfile,
+      goalCalories: appliedGoalCalories,
+    });
+
+    setWeeklySummary(nextSummary);
+    setWeeklyPatternLines(getWeeklyPatternLines(nextSummary));
+    setWeeklyFeedback(generateRuleBasedWeeklyFeedback(nextSummary));
+    setWeeklyFeedbackSource("fallback");
+    setWeeklyFeedbackLoading(true);
+
+    fetch("/api/weekly-feedback", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ summary: nextSummary }),
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          feedback?: WeeklyAiFeedback;
+          source?: "ai" | "fallback";
+        };
+
+        if (payload.feedback) {
+          setWeeklyFeedback(payload.feedback);
+          setWeeklyFeedbackSource(payload.source ?? "fallback");
+        }
+      })
+      .catch(() => {
+        setWeeklyFeedback(generateRuleBasedWeeklyFeedback(nextSummary));
+        setWeeklyFeedbackSource("fallback");
+      })
+      .finally(() => {
+        setWeeklyFeedbackLoading(false);
+      });
+  }, [profile, weightHistory]);
 
   const currentWeight = weightHistory[0]?.weightKg ?? (Number(bodyWeightKgInput) || 55);
   const previewProfile: OnboardingProfile | null = targetDateInput
@@ -280,97 +365,6 @@ export default function ReportPage() {
         <p className="mt-3 text-xs leading-5 text-muted">
           계산식: `MET × 3.5 × 몸무게(kg) × 시간(분) / 200`
         </p>
-      </Card>
-
-      <Card>
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-          Goal settings
-        </p>
-        <h2 className="mt-2 text-xl font-semibold text-ink">목표와 방식 다시 정하기</h2>
-        <p className="mt-2 text-sm leading-6 text-muted">
-          온보딩 때 정한 목표 몸무게, 날짜, 진행 방식, 목표 칼로리를 나중에도 바꿀 수 있어요.
-        </p>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <button
-            type="button"
-            onClick={() => openProfileModal(1)}
-            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Goal</p>
-            <p className="mt-2 text-base font-semibold text-ink">목표 몸무게</p>
-            <p className="mt-1 text-sm text-muted">{goalWeightKgInput} kg</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openProfileModal(1)}
-            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Date</p>
-            <p className="mt-2 text-base font-semibold text-ink">목표 날짜</p>
-            <p className="mt-1 text-sm text-muted">{targetDateInput || "아직 정하지 않았어요"}</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openProfileModal(0)}
-            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Challenge</p>
-            <p className="mt-2 text-base font-semibold text-ink">제일 흔들리기 쉬운 것</p>
-            <p className="mt-1 text-sm text-muted">{challengeInput}</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openProfileModal(0)}
-            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Pace</p>
-            <p className="mt-2 text-base font-semibold text-ink">다이어트 페이스</p>
-            <p className="mt-1 text-sm text-muted">{paceInput}</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => openProfileModal(0)}
-            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5 md:col-span-2"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Coach tone</p>
-            <p className="mt-2 text-base font-semibold text-ink">AI 피드백 톤</p>
-            <p className="mt-1 text-sm text-muted">{coachToneInput}</p>
-          </button>
-        </div>
-
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="customDailyTargetInput">
-              목표 칼로리 직접 조정
-            </label>
-            <Input
-              id="customDailyTargetInput"
-              type="number"
-              value={customDailyTargetInput}
-              onChange={(event) => setCustomDailyTargetInput(event.target.value)}
-              placeholder="비워두면 자동 계산"
-            />
-          </div>
-        </div>
-
-        <div className="mt-4 rounded-[20px] border border-line/80 bg-white/75 px-4 py-4">
-          <p className="text-sm font-semibold text-ink">현재 적용될 목표 칼로리</p>
-          <p className="mt-2 text-2xl font-black text-ink">{calculatedTargetCalories} kcal</p>
-          <p className="mt-2 text-xs leading-6 text-muted">
-            직접 입력을 비워두면 현재 몸무게, 목표 몸무게, 목표 날짜를 바탕으로 자동 계산돼요.
-          </p>
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button onClick={() => openProfileModal(0)}>온보딩처럼 다시 설정하기</Button>
-          <Button variant="secondary" onClick={handleSaveProfileSettings}>목표 칼로리 저장</Button>
-          {profileSaveMessage ? <p className="text-xs text-muted">{profileSaveMessage}</p> : null}
-        </div>
       </Card>
 
       {isProfileModalOpen ? (
@@ -635,10 +629,15 @@ export default function ReportPage() {
           Pattern summary
         </p>
         <h2 className="mt-2 text-xl font-semibold text-ink">이번 주 패턴</h2>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          {weeklySummary
+            ? `${weeklySummary.periodLabel} 기록을 바탕으로 흐름을 읽어봤어요.`
+            : "이번 주 기록을 바탕으로 흐름을 읽어볼게요."}
+        </p>
         <div className="mt-4 space-y-3 text-sm leading-6 text-muted">
-          <p>몸무게는 하루에도 조금씩 달라질 수 있어요.</p>
-          <p>며칠 단위로 천천히 보면 변화를 더 잘 읽을 수 있어요.</p>
-          <p>비슷한 시간대에 기록하면 흐름이 더 잘 보여요.</p>
+          {weeklyPatternLines.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
         </div>
       </Card>
 
@@ -647,10 +646,154 @@ export default function ReportPage() {
           AI coach
         </p>
         <h2 className="mt-2 text-xl font-semibold text-ink">주간 피드백</h2>
+        <div className="mt-3 flex items-center gap-2">
+          <div className="rounded-full bg-white/80 px-3 py-1 text-xs font-semibold text-ink">
+            {weeklyFeedbackLoading
+              ? "피드백 정리 중"
+              : weeklyFeedbackSource === "ai"
+                ? "AI가 읽어준 요약"
+                : "기록 기반 요약"}
+          </div>
+          {weeklySummary ? (
+            <div className="rounded-full bg-white/70 px-3 py-1 text-xs font-semibold text-muted">
+              {weeklySummary.periodLabel}
+            </div>
+          ) : null}
+        </div>
+
         <p className="mt-3 text-sm leading-7 text-muted">
-          몸무게는 수분량이나 식사 시간에 따라서도 조금 달라질 수 있어요. 너무 하루 숫자에만
-          집중하지 말고, 며칠 흐름을 함께 봐주세요.
+          {weeklyFeedbackLoading
+            ? "이번 주 기록을 읽고 있어요. 잠깐만 기다려주세요."
+            : weeklyFeedback?.summary ?? "이번 주 흐름을 읽는 중이에요."}
         </p>
+
+        <div className="mt-4 grid gap-3">
+          <div className="rounded-[20px] border border-line/80 bg-white/75 px-4 py-4">
+            <p className="text-sm font-semibold text-ink">잘한 점</p>
+            <div className="mt-2 space-y-2 text-sm leading-6 text-muted">
+              {(weeklyFeedback?.goodJob.length
+                ? weeklyFeedback.goodJob
+                : ["이번 주 기록만으로도 다음 흐름을 읽을 준비가 되고 있어요."]).map((item) => (
+                <p key={item}>• {item}</p>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-[20px] border border-line/80 bg-white/75 px-4 py-4">
+            <p className="text-sm font-semibold text-ink">조심할 점</p>
+            <div className="mt-2 space-y-2 text-sm leading-6 text-muted">
+              {(weeklyFeedback?.watchOut.length
+                ? weeklyFeedback.watchOut
+                : ["아직 눈에 띄는 무너짐은 크지 않아요. 지금처럼 기록을 이어가면 더 잘 보여요."]).map(
+                (item) => (
+                  <p key={item}>• {item}</p>
+                ),
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-[20px] border border-line/80 bg-white/75 px-4 py-4">
+            <p className="text-sm font-semibold text-ink">다음 주 한 걸음</p>
+            <div className="mt-2 space-y-2 text-sm leading-6 text-muted">
+              {(weeklyFeedback?.nextAction.length
+                ? weeklyFeedback.nextAction
+                : ["다음 주에는 하루 한 번만 더 기록을 이어가봐요."]).map((item) => (
+                <p key={item}>• {item}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+          Goal settings
+        </p>
+        <h2 className="mt-2 text-xl font-semibold text-ink">목표와 방식 다시 정하기</h2>
+        <p className="mt-2 text-sm leading-6 text-muted">
+          온보딩 때 정한 목표 몸무게, 날짜, 진행 방식, 목표 칼로리를 나중에도 바꿀 수 있어요.
+        </p>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => openProfileModal(1)}
+            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Goal</p>
+            <p className="mt-2 text-base font-semibold text-ink">목표 몸무게</p>
+            <p className="mt-1 text-sm text-muted">{goalWeightKgInput} kg</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openProfileModal(1)}
+            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Date</p>
+            <p className="mt-2 text-base font-semibold text-ink">목표 날짜</p>
+            <p className="mt-1 text-sm text-muted">{targetDateInput || "아직 정하지 않았어요"}</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openProfileModal(0)}
+            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Challenge</p>
+            <p className="mt-2 text-base font-semibold text-ink">제일 흔들리기 쉬운 것</p>
+            <p className="mt-1 text-sm text-muted">{challengeInput}</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openProfileModal(0)}
+            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Pace</p>
+            <p className="mt-2 text-base font-semibold text-ink">다이어트 페이스</p>
+            <p className="mt-1 text-sm text-muted">{paceInput}</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openProfileModal(0)}
+            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5 md:col-span-2"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Coach tone</p>
+            <p className="mt-2 text-base font-semibold text-ink">AI 피드백 톤</p>
+            <p className="mt-1 text-sm text-muted">{coachToneInput}</p>
+          </button>
+        </div>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="customDailyTargetInput">
+              목표 칼로리 직접 조정
+            </label>
+            <Input
+              id="customDailyTargetInput"
+              type="number"
+              value={customDailyTargetInput}
+              onChange={(event) => setCustomDailyTargetInput(event.target.value)}
+              placeholder="비워두면 자동 계산"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-[20px] border border-line/80 bg-white/75 px-4 py-4">
+          <p className="text-sm font-semibold text-ink">현재 적용될 목표 칼로리</p>
+          <p className="mt-2 text-2xl font-black text-ink">{calculatedTargetCalories} kcal</p>
+          <p className="mt-2 text-xs leading-6 text-muted">
+            직접 입력을 비워두면 현재 몸무게, 목표 몸무게, 목표 날짜를 바탕으로 자동 계산돼요.
+          </p>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button onClick={() => openProfileModal(0)}>다시 설정하기</Button>
+          <Button variant="secondary" onClick={handleSaveProfileSettings}>목표 칼로리 저장</Button>
+          {profileSaveMessage ? <p className="text-xs text-muted">{profileSaveMessage}</p> : null}
+        </div>
       </Card>
 
       <Card>
