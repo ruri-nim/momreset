@@ -10,6 +10,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { getLocalDateKey } from "@/lib/diet-app-date";
 import {
+  DAILYOK_LOCAL_EVENT,
   getRuleHistoryForDate,
   loadAvoidRules,
   loadDoRules,
@@ -55,22 +56,31 @@ export default function RulesPage() {
   const hasSkippedInitialAvoidSave = useRef(false);
 
   useEffect(() => {
-    const savedDoRules = loadDoRules();
-    const savedAvoidRules = loadAvoidRules();
-    const todayHistory = getRuleHistoryForDate(todayKey);
+    const loadData = () => {
+      const savedDoRules = loadDoRules();
+      const savedAvoidRules = loadAvoidRules();
+      const todayHistory = getRuleHistoryForDate(todayKey);
 
-    setDoRules(
-      savedDoRules.map((item) => ({
-        ...item,
-        status: todayHistory?.doRuleStatuses[item.id] ?? "pending",
-      })),
-    );
-    setAvoidRules(
-      savedAvoidRules.map((item) => ({
-        ...item,
-        status: todayHistory?.avoidRuleStatuses[item.id] ?? "pending",
-      })),
-    );
+      setDoRules(
+        savedDoRules.map((item) => ({
+          ...item,
+          status: todayHistory?.doRuleStatuses[item.id] ?? "pending",
+        })),
+      );
+      setAvoidRules(
+        savedAvoidRules.map((item) => ({
+          ...item,
+          status: todayHistory?.avoidRuleStatuses[item.id] ?? "pending",
+        })),
+      );
+    };
+
+    loadData();
+    window.addEventListener(DAILYOK_LOCAL_EVENT, loadData);
+
+    return () => {
+      window.removeEventListener(DAILYOK_LOCAL_EVENT, loadData);
+    };
   }, [todayKey]);
 
   useEffect(() => {

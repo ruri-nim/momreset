@@ -22,6 +22,20 @@ export interface RuleHistoryEntry {
   avoidRuleStatuses: Record<string, RuleItem["status"]>;
 }
 
+export type MealSection = "아침" | "점심" | "저녁" | "간식";
+
+export interface DietFoodItem {
+  id: string;
+  name: string;
+  calories: number;
+  mealSection: MealSection;
+  loggedAt: string;
+  portionMultiplier?: number;
+  consumedGrams?: number;
+  source?: "manual" | "search";
+  note?: string;
+}
+
 export interface FoodLogItem {
   id: string;
   name: string;
@@ -53,4 +67,15 @@ export interface OnboardingProfile {
   goalWeightKg: number;
   targetDate: string;
   customDailyTargetCalories?: number;
+}
+
+export interface DietAppSnapshot {
+  foodList: DietFoodItem[];
+  doRules: RuleItem[];
+  avoidRules: RuleItem[];
+  exerciseLogs: ExerciseLogItem[];
+  bodyWeightKg: number;
+  weightHistory: WeightLogItem[];
+  ruleHistory: RuleHistoryEntry[];
+  onboardingProfile: OnboardingProfile | null;
 }

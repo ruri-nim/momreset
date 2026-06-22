@@ -15,11 +15,13 @@ import {
   getLocalDateKey,
 } from "@/lib/diet-app-date";
 import {
+  DAILYOK_LOCAL_EVENT,
   getRuleHistoryForDate,
   loadAvoidRules,
   loadBodyWeightKg,
   loadDoRules,
   loadExerciseLogs,
+  loadFoodList,
   loadOnboardingProfile,
   loadRuleHistory,
   saveAvoidRules,
@@ -34,7 +36,6 @@ import type {
 } from "@/types/diet-app";
 
 const weekdayLabels = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-const FOOD_LIST_STORAGE_KEY = "food-list";
 
 const smileStickerMap = {
   very_happy: { emoji: "😎", tint: "bg-[#ffe066]", ring: "ring-[#ffca28]" },
@@ -110,39 +111,37 @@ export default function Page() {
     currentMonthDate.getMonth() === today.getMonth();
 
   useEffect(() => {
-    const savedFoods = localStorage.getItem(FOOD_LIST_STORAGE_KEY);
+    const loadData = () => {
+      const savedDoRules = loadDoRules();
+      const savedAvoidRules = loadAvoidRules();
+      const todayHistory = getRuleHistoryForDate(todayKey);
+      const profile = loadOnboardingProfile();
+      const currentWeightKg = loadBodyWeightKg();
 
-    if (savedFoods) {
-      const parsedFoods = JSON.parse(savedFoods) as HomeFoodItem[];
-      setFoodList(
-        parsedFoods.map((item) => ({
+      setFoodList(loadFoodList() as HomeFoodItem[]);
+      setDoRules(
+        savedDoRules.map((item) => ({
           ...item,
-          loggedAt: item.loggedAt ?? todayKey,
+          status: todayHistory?.doRuleStatuses[item.id] ?? "pending",
         })),
       );
-    }
+      setAvoidRules(
+        savedAvoidRules.map((item) => ({
+          ...item,
+          status: todayHistory?.avoidRuleStatuses[item.id] ?? "pending",
+        })),
+      );
+      setExerciseLogs(loadExerciseLogs());
+      setRuleHistory(loadRuleHistory());
+      setDailyTargetCalories(calculateDailyTargetCalories(currentWeightKg, profile));
+    };
 
-    const savedDoRules = loadDoRules();
-    const savedAvoidRules = loadAvoidRules();
-    const todayHistory = getRuleHistoryForDate(todayKey);
-    const profile = loadOnboardingProfile();
-    const currentWeightKg = loadBodyWeightKg();
+    loadData();
+    window.addEventListener(DAILYOK_LOCAL_EVENT, loadData);
 
-    setDoRules(
-      savedDoRules.map((item) => ({
-        ...item,
-        status: todayHistory?.doRuleStatuses[item.id] ?? "pending",
-      })),
-    );
-    setAvoidRules(
-      savedAvoidRules.map((item) => ({
-        ...item,
-        status: todayHistory?.avoidRuleStatuses[item.id] ?? "pending",
-      })),
-    );
-    setExerciseLogs(loadExerciseLogs());
-    setRuleHistory(loadRuleHistory());
-    setDailyTargetCalories(calculateDailyTargetCalories(currentWeightKg, profile));
+    return () => {
+      window.removeEventListener(DAILYOK_LOCAL_EVENT, loadData);
+    };
   }, [todayKey]);
 
   useEffect(() => {
@@ -151,25 +150,13 @@ export default function Page() {
 
   useEffect(() => {
     const onStorage = () => {
-      const savedFoods = localStorage.getItem(FOOD_LIST_STORAGE_KEY);
-      if (savedFoods) {
-        const parsedFoods = JSON.parse(savedFoods) as HomeFoodItem[];
-        setFoodList(
-          parsedFoods.map((item) => ({
-            ...item,
-            loggedAt: item.loggedAt ?? todayKey,
-          })),
-        );
-      } else {
-        setFoodList([]);
-      }
-
       const savedDoRules = loadDoRules();
       const savedAvoidRules = loadAvoidRules();
       const todayHistory = getRuleHistoryForDate(todayKey);
       const profile = loadOnboardingProfile();
       const currentWeightKg = loadBodyWeightKg();
 
+      setFoodList(loadFoodList() as HomeFoodItem[]);
       setDoRules(
         savedDoRules.map((item) => ({
           ...item,

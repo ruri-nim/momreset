@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { OnboardingGate } from "@/components/diet-app/onboarding-gate";
+import { SessionSync } from "@/components/diet-app/session-sync";
 import { PwaRegister } from "@/components/pwa/pwa-register";
 import "./globals.css";
 
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body>
         <AuthProvider>
           <PwaRegister />
+          <SessionSync />
           <OnboardingGate>{children}</OnboardingGate>
         </AuthProvider>
       </body>

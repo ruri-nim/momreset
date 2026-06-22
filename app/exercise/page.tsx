@@ -15,6 +15,7 @@ import {
   findExercisePresetByName,
 } from "@/lib/exercise-calories";
 import {
+  DAILYOK_LOCAL_EVENT,
   loadBodyWeightKg,
   loadExerciseLogs,
   saveExerciseLogs,
@@ -38,8 +39,17 @@ export default function ExercisePage() {
   const hasSkippedInitialSave = useRef(false);
 
   useEffect(() => {
-    setExerciseLogs(loadExerciseLogs());
-    setBodyWeightKg(String(loadBodyWeightKg()));
+    const loadData = () => {
+      setExerciseLogs(loadExerciseLogs());
+      setBodyWeightKg(String(loadBodyWeightKg()));
+    };
+
+    loadData();
+    window.addEventListener(DAILYOK_LOCAL_EVENT, loadData);
+
+    return () => {
+      window.removeEventListener(DAILYOK_LOCAL_EVENT, loadData);
+    };
   }, []);
 
   useEffect(() => {

@@ -11,24 +11,18 @@ import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { calculateDailyTargetCalories, DEFAULT_DAILY_TARGET_CALORIES } from "@/lib/diet-app-calorie-target";
 import { getDateKeyDaysAgo, getLocalDateKey } from "@/lib/diet-app-date";
-import { loadBodyWeightKg, loadOnboardingProfile } from "@/lib/diet-app-storage";
+import {
+  DAILYOK_LOCAL_EVENT,
+  loadBodyWeightKg,
+  loadFoodList,
+  loadOnboardingProfile,
+  saveFoodList,
+} from "@/lib/diet-app-storage";
+import type { DietFoodItem } from "@/types/diet-app";
 import type { MealRecord } from "@/types/food";
 
 type MealSection = "아침" | "점심" | "저녁" | "간식";
 
-interface FoodItem {
-  id: string;
-  name: string;
-  calories: number;
-  mealSection: MealSection;
-  loggedAt: string;
-  portionMultiplier?: number;
-  consumedGrams?: number;
-  source?: "manual" | "search";
-  note?: string;
-}
-
-const STORAGE_KEY = "food-list";
 const mealSections: MealSection[] = ["아침", "점심", "저녁", "간식"];
 
 function getSectionFromMealType(mealType: string): MealSection {
@@ -70,7 +64,7 @@ export default function FoodPage() {
   const [portionMultiplier, setPortionMultiplier] = useState("1");
   const [consumedGrams, setConsumedGrams] = useState("");
   const [manualMealSection, setManualMealSection] = useState<MealSection>("간식");
-  const [foodList, setFoodList] = useState<FoodItem[]>([]);
+  const [foodList, setFoodList] = useState<DietFoodItem[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [editingFoodId, setEditingFoodId] = useState<string | null>(null);
@@ -84,21 +78,19 @@ export default function FoodPage() {
   const hasSkippedInitialSave = useRef(false);
 
   useEffect(() => {
-    const savedFoods = localStorage.getItem(STORAGE_KEY);
-    const profile = loadOnboardingProfile();
-    const currentWeightKg = loadBodyWeightKg();
+    const loadData = () => {
+      const profile = loadOnboardingProfile();
+      const currentWeightKg = loadBodyWeightKg();
+      setFoodList(loadFoodList());
+      setDailyTargetCalories(calculateDailyTargetCalories(currentWeightKg, profile));
+    };
 
-    if (savedFoods) {
-      const parsedFoods = JSON.parse(savedFoods) as FoodItem[];
-      setFoodList(
-        parsedFoods.map((item) => ({
-          ...item,
-          loggedAt: item.loggedAt ?? getLocalDateKey(),
-        })),
-      );
-    }
+    loadData();
+    window.addEventListener(DAILYOK_LOCAL_EVENT, loadData);
 
-    setDailyTargetCalories(calculateDailyTargetCalories(currentWeightKg, profile));
+    return () => {
+      window.removeEventListener(DAILYOK_LOCAL_EVENT, loadData);
+    };
   }, []);
 
   useEffect(() => {
@@ -107,7 +99,7 @@ export default function FoodPage() {
       return;
     }
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(foodList));
+    saveFoodList(foodList);
   }, [foodList]);
 
   const todayKey = getLocalDateKey();
@@ -142,7 +134,7 @@ export default function FoodPage() {
       return false;
     }
 
-    const newFood: FoodItem = {
+    const newFood: DietFoodItem = {
       id: crypto.randomUUID(),
       name: foodName,
       calories: Number(calories),
@@ -171,7 +163,7 @@ export default function FoodPage() {
   const handleAddMealFromSearch = (meal: MealRecord) => {
     const adjustedCalories = Math.round(meal.calories * meal.portionMultiplier);
 
-    const nextFood: FoodItem = {
+    const nextFood: DietFoodItem = {
       id: meal.id,
       name: meal.name,
       calories: adjustedCalories,
@@ -236,7 +228,7 @@ export default function FoodPage() {
     setFoodList((prev) => [...copiedFoods, ...prev]);
   };
 
-  const handleStartEdit = (food: FoodItem) => {
+  const handleStartEdit = (food: DietFoodItem) => {
     setEditingFoodId(food.id);
     setEditingName(food.name);
     setEditingCalories(String(food.calories));

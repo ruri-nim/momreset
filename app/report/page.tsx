@@ -11,10 +11,12 @@ import { Input } from "@/components/ui/input";
 import { calculateDailyTargetCalories } from "@/lib/diet-app-calorie-target";
 import { formatDateLabel, isDateWithinLastDays } from "@/lib/diet-app-date";
 import {
+  DAILYOK_LOCAL_EVENT,
   loadAvoidRules,
   loadBodyWeightKg,
   loadDoRules,
   loadExerciseLogs,
+  loadFoodList,
   loadOnboardingProfile,
   loadRuleHistory,
   loadWeightHistory,
@@ -82,19 +84,8 @@ function getTodayKey() {
   return `${year}-${month}-${day}`;
 }
 
-const FOOD_LIST_STORAGE_KEY = "food-list";
-
 function loadStoredFoods() {
-  if (typeof window === "undefined") {
-    return [] as WeeklyFoodLogItem[];
-  }
-
-  try {
-    const raw = window.localStorage.getItem(FOOD_LIST_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as WeeklyFoodLogItem[]) : [];
-  } catch {
-    return [] as WeeklyFoodLogItem[];
-  }
+  return loadFoodList() as WeeklyFoodLogItem[];
 }
 
 export default function ReportPage() {
@@ -120,24 +111,30 @@ export default function ReportPage() {
   const [weeklyFeedback, setWeeklyFeedback] = useState<WeeklyAiFeedback | null>(null);
   const [weeklyFeedbackSource, setWeeklyFeedbackSource] = useState<"ai" | "fallback">("fallback");
   const [weeklyFeedbackLoading, setWeeklyFeedbackLoading] = useState(true);
+  const [dataVersion, setDataVersion] = useState(0);
 
   useEffect(() => {
-    const loadedWeight = loadBodyWeightKg();
-    const loadedProfile = loadOnboardingProfile();
+    const loadData = () => {
+      const loadedWeight = loadBodyWeightKg();
+      const loadedProfile = loadOnboardingProfile();
 
-    setBodyWeightKgInput(String(loadedWeight));
-    setWeightHistory(loadWeightHistory());
-    setProfile(loadedProfile);
-    setGoalWeightKgInput(String(loadedProfile?.goalWeightKg ?? 50));
-    setTargetDateInput(loadedProfile?.targetDate ?? "");
-    setChallengeInput(loadedProfile?.challenge ?? "야식");
-    setPaceInput(loadedProfile?.pace ?? "꾸준하게");
-    setCoachToneInput(loadedProfile?.coachTone ?? "발랄하게");
-    setCustomDailyTargetInput(
-      loadedProfile?.customDailyTargetCalories
-        ? String(loadedProfile.customDailyTargetCalories)
-        : "",
-    );
+      setBodyWeightKgInput(String(loadedWeight));
+      setWeightHistory(loadWeightHistory());
+      setProfile(loadedProfile);
+      setGoalWeightKgInput(String(loadedProfile?.goalWeightKg ?? 50));
+      setTargetDateInput(loadedProfile?.targetDate ?? "");
+      setChallengeInput(loadedProfile?.challenge ?? "야식");
+      setPaceInput(loadedProfile?.pace ?? "꾸준하게");
+      setCoachToneInput(loadedProfile?.coachTone ?? "발랄하게");
+      setCustomDailyTargetInput(
+        loadedProfile?.customDailyTargetCalories
+          ? String(loadedProfile.customDailyTargetCalories)
+          : "",
+      );
+      setDataVersion((prev) => prev + 1);
+    };
+
+    loadData();
     getProviders()
       .then((providers) => {
         setAvailableProviders(Object.keys(providers ?? {}));
@@ -145,6 +142,11 @@ export default function ReportPage() {
       .catch(() => {
         setProviderLoadFailed(true);
       });
+    window.addEventListener(DAILYOK_LOCAL_EVENT, loadData);
+
+    return () => {
+      window.removeEventListener(DAILYOK_LOCAL_EVENT, loadData);
+    };
   }, []);
 
   useEffect(() => {
@@ -198,7 +200,7 @@ export default function ReportPage() {
       .finally(() => {
         setWeeklyFeedbackLoading(false);
       });
-  }, [profile, weightHistory]);
+  }, [profile, weightHistory, dataVersion]);
 
   const currentWeight = weightHistory[0]?.weightKg ?? (Number(bodyWeightKgInput) || 55);
   const previewProfile: OnboardingProfile | null = targetDateInput

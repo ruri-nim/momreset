@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { getProviders, signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -80,6 +81,7 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
   const [avoidRules, setAvoidRules] = useState<RuleItem[]>([]);
   const [doInput, setDoInput] = useState("");
   const [avoidInput, setAvoidInput] = useState("");
+  const [availableProviders, setAvailableProviders] = useState<string[]>([]);
 
   useEffect(() => {
     const savedProfile = loadOnboardingProfile();
@@ -92,16 +94,24 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
       setTargetDate(getLocalDateKey(nextMonth));
     }
 
+    getProviders()
+      .then((providers) => {
+        setAvailableProviders(Object.keys(providers ?? {}));
+      })
+      .catch(() => {
+        setAvailableProviders([]);
+      });
+
     setReady(true);
   }, []);
 
-  const handleFinish = () => {
+  const persistOnboarding = () => {
     const currentWeight = Number(currentWeightKg);
     const goalWeight = Number(goalWeightKg);
 
     if (!currentWeight || !goalWeight || !targetDate) {
       window.alert("몸무게와 목표 날짜를 먼저 적어주세요.");
-      return;
+      return false;
     }
 
     const profile: OnboardingProfile = {
@@ -131,7 +141,27 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
     saveWeightHistory(nextHistory);
     saveDoRules(doRules);
     saveAvoidRules(avoidRules);
+    return true;
+  };
+
+  const handleGuestStart = () => {
+    const saved = persistOnboarding();
+
+    if (!saved) {
+      return;
+    }
+
     window.location.reload();
+  };
+
+  const handleSocialStart = async (provider: "google" | "naver") => {
+    const saved = persistOnboarding();
+
+    if (!saved) {
+      return;
+    }
+
+    await signIn(provider, { callbackUrl: "/" });
   };
 
   const addRuleItem = (
@@ -504,9 +534,39 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
                     <Button variant="ghost" className="flex-1 justify-center" onClick={() => setStep(2)}>
                       이전
                     </Button>
-                    <Button className="flex-1 justify-center" onClick={handleFinish}>
-                      시작 완료
-                    </Button>
+                  </div>
+
+                  <div className="rounded-[24px] border border-line/80 bg-white/75 px-4 py-4">
+                    <p className="text-sm font-semibold text-ink">어떻게 시작할까요?</p>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      지금 설정한 내용은 먼저 저장해두고, 원하는 방식으로 바로 시작할 수 있어요.
+                    </p>
+
+                    <div className="mt-4 grid gap-3">
+                      {availableProviders.includes("google") ? (
+                        <Button className="w-full justify-center" onClick={() => void handleSocialStart("google")}>
+                          Google로 시작하기
+                        </Button>
+                      ) : null}
+
+                      {availableProviders.includes("naver") ? (
+                        <Button
+                          variant="secondary"
+                          className="w-full justify-center"
+                          onClick={() => void handleSocialStart("naver")}
+                        >
+                          Naver로 시작하기
+                        </Button>
+                      ) : null}
+
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-center"
+                        onClick={handleGuestStart}
+                      >
+                        Guest로 시작하기
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ) : null}

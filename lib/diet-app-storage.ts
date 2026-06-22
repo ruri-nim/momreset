@@ -1,11 +1,15 @@
 import { getLocalDateKey } from "@/lib/diet-app-date";
 import type {
+  DietAppSnapshot,
+  DietFoodItem,
   ExerciseLogItem,
   OnboardingProfile,
   RuleHistoryEntry,
   RuleItem,
   WeightLogItem,
 } from "@/types/diet-app";
+
+export const DAILYOK_LOCAL_EVENT = "dailyok:local-changed";
 
 export const DIET_APP_STORAGE_KEYS = {
   foodList: "food-list",
@@ -17,6 +21,8 @@ export const DIET_APP_STORAGE_KEYS = {
   ruleHistory: "diet-app:rule-history",
   onboardingProfile: "diet-app:onboarding-profile",
 } as const;
+
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
 
 function readStorage<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") {
@@ -31,12 +37,71 @@ function readStorage<T>(key: string, fallback: T): T {
   }
 }
 
+function readSnapshotFromStorage(): DietAppSnapshot {
+  return {
+    foodList: readStorage<DietFoodItem[]>(DIET_APP_STORAGE_KEYS.foodList, []),
+    doRules: readStorage<RuleItem[]>(DIET_APP_STORAGE_KEYS.doRules, []),
+    avoidRules: readStorage<RuleItem[]>(DIET_APP_STORAGE_KEYS.avoidRules, []),
+    exerciseLogs: readStorage<ExerciseLogItem[]>(DIET_APP_STORAGE_KEYS.exerciseLogs, []),
+    bodyWeightKg: readStorage<number>(DIET_APP_STORAGE_KEYS.bodyWeightKg, 55),
+    weightHistory: readStorage<WeightLogItem[]>(DIET_APP_STORAGE_KEYS.weightHistory, []),
+    ruleHistory: readStorage<RuleHistoryEntry[]>(DIET_APP_STORAGE_KEYS.ruleHistory, []),
+    onboardingProfile: readStorage<OnboardingProfile | null>(
+      DIET_APP_STORAGE_KEYS.onboardingProfile,
+      null,
+    ),
+  };
+}
+
+function queueServerSync() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (syncTimer) {
+    clearTimeout(syncTimer);
+  }
+
+  syncTimer = setTimeout(() => {
+    fetch("/api/dailyok/snapshot", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(readSnapshotFromStorage()),
+    }).catch(() => {
+      // Guests or offline users can keep using local storage without interruption.
+    });
+  }, 300);
+}
+
 function writeStorage<T>(key: string, value: T) {
   if (typeof window === "undefined") {
     return;
   }
 
   window.localStorage.setItem(key, JSON.stringify(value));
+  window.dispatchEvent(new CustomEvent(DAILYOK_LOCAL_EVENT));
+  queueServerSync();
+}
+
+export function notifyDailyOkChanged() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.dispatchEvent(new CustomEvent(DAILYOK_LOCAL_EVENT));
+}
+
+export function loadFoodList() {
+  return readStorage<DietFoodItem[]>(DIET_APP_STORAGE_KEYS.foodList, []).map((item) => ({
+    ...item,
+    loggedAt: item.loggedAt ?? getLocalDateKey(),
+  }));
+}
+
+export function saveFoodList(items: DietFoodItem[]) {
+  writeStorage(DIET_APP_STORAGE_KEYS.foodList, items);
 }
 
 export function loadDoRules() {
@@ -141,4 +206,6 @@ export function resetDietAppStorage() {
   });
 
   window.localStorage.removeItem("food-list");
+  window.dispatchEvent(new CustomEvent(DAILYOK_LOCAL_EVENT));
+  queueServerSync();
 }
