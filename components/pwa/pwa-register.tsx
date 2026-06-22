@@ -8,9 +8,23 @@ export function PwaRegister() {
       return;
     }
 
-    navigator.serviceWorker.register("/sw.js").catch(() => {
-      // PWA registration should never block app usage.
-    });
+    let hasRefreshed = false;
+
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then(() => {
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (hasRefreshed) {
+            return;
+          }
+
+          hasRefreshed = true;
+          window.location.reload();
+        });
+      })
+      .catch(() => {
+        // PWA registration should never block app usage.
+      });
   }, []);
 
   return null;
