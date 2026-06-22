@@ -46,7 +46,7 @@ export interface WeightLogItem {
 
 export interface OnboardingProfile {
   completedAt: string;
-  challenge: "야식" | "단음식" | "배달음식" | "불규칙한 식사";
+  challenge: "야식" | "단음식" | "배달음식" | "불규칙한 식사" | "술 마시기" | "움직이지 않기";
   pace: "가볍게" | "꾸준하게" | "집중해서";
   coachTone: "다정하게" | "솔직하게" | "발랄하게";
   currentWeightKg: number;

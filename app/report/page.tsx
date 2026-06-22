@@ -30,9 +30,37 @@ const challengeOptions: OnboardingProfile["challenge"][] = [
   "단음식",
   "배달음식",
   "불규칙한 식사",
+  "술 마시기",
+  "움직이지 않기",
 ];
 const paceOptions: OnboardingProfile["pace"][] = ["가볍게", "꾸준하게", "집중해서"];
 const coachToneOptions: OnboardingProfile["coachTone"][] = ["다정하게", "솔직하게", "발랄하게"];
+
+function ChoiceChip({
+  selected,
+  label,
+  onClick,
+}: {
+  selected: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="rounded-full border px-4 py-2 text-sm font-semibold transition"
+      style={{
+        borderColor: selected ? "rgba(255, 140, 102, 0.65)" : "rgb(var(--color-line) / 0.92)",
+        background: selected ? "rgba(255, 224, 102, 0.32)" : "rgba(255,255,255,0.82)",
+        color: "rgb(var(--color-ink))",
+        boxShadow: selected ? "0 8px 20px rgba(255, 171, 64, 0.18)" : "none",
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 function getTodayKey() {
   const today = new Date();
@@ -58,6 +86,8 @@ export default function ReportPage() {
   const [coachToneInput, setCoachToneInput] = useState<OnboardingProfile["coachTone"]>("발랄하게");
   const [customDailyTargetInput, setCustomDailyTargetInput] = useState("");
   const [profileSaveMessage, setProfileSaveMessage] = useState("");
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [profileModalStep, setProfileModalStep] = useState(0);
 
   useEffect(() => {
     const loadedWeight = loadBodyWeightKg();
@@ -173,6 +203,16 @@ export default function ReportPage() {
     setProfileSaveMessage("목표와 다이어트 방식을 업데이트했어요.");
   };
 
+  const openProfileModal = (step: number) => {
+    setProfileModalStep(step);
+    setIsProfileModalOpen(true);
+  };
+
+  const handleSaveProfileFromModal = () => {
+    handleSaveProfileSettings();
+    setIsProfileModalOpen(false);
+  };
+
   const handleResetRecords = () => {
     const shouldReset = window.confirm(
       "저장된 음식, 운동, 규칙, 몸무게 기록을 모두 초기화할까요?",
@@ -251,76 +291,59 @@ export default function ReportPage() {
           온보딩 때 정한 목표 몸무게, 날짜, 진행 방식, 목표 칼로리를 나중에도 바꿀 수 있어요.
         </p>
 
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => openProfileModal(1)}
+            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Goal</p>
+            <p className="mt-2 text-base font-semibold text-ink">목표 몸무게</p>
+            <p className="mt-1 text-sm text-muted">{goalWeightKgInput} kg</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openProfileModal(1)}
+            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Date</p>
+            <p className="mt-2 text-base font-semibold text-ink">목표 날짜</p>
+            <p className="mt-1 text-sm text-muted">{targetDateInput || "아직 정하지 않았어요"}</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openProfileModal(0)}
+            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Challenge</p>
+            <p className="mt-2 text-base font-semibold text-ink">제일 흔들리기 쉬운 것</p>
+            <p className="mt-1 text-sm text-muted">{challengeInput}</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openProfileModal(0)}
+            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Pace</p>
+            <p className="mt-2 text-base font-semibold text-ink">다이어트 페이스</p>
+            <p className="mt-1 text-sm text-muted">{paceInput}</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => openProfileModal(0)}
+            className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4 text-left transition hover:-translate-y-0.5 md:col-span-2"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">Coach tone</p>
+            <p className="mt-2 text-base font-semibold text-ink">AI 피드백 톤</p>
+            <p className="mt-1 text-sm text-muted">{coachToneInput}</p>
+          </button>
+        </div>
+
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="goalWeightKgInput">
-              목표 몸무게
-            </label>
-            <Input
-              id="goalWeightKgInput"
-              type="number"
-              value={goalWeightKgInput}
-              onChange={(event) => setGoalWeightKgInput(event.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="targetDateInput">
-              목표 날짜
-            </label>
-            <Input
-              id="targetDateInput"
-              type="date"
-              value={targetDateInput}
-              onChange={(event) => setTargetDateInput(event.target.value)}
-            />
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-ink">제일 흔들리기 쉬운 것</label>
-            <div className="flex flex-wrap gap-2">
-              {challengeOptions.map((option) => (
-                <Button
-                  key={option}
-                  variant={challengeInput === option ? "primary" : "secondary"}
-                  onClick={() => setChallengeInput(option)}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-ink">다이어트 페이스</label>
-            <div className="flex flex-wrap gap-2">
-              {paceOptions.map((option) => (
-                <Button
-                  key={option}
-                  variant={paceInput === option ? "primary" : "secondary"}
-                  onClick={() => setPaceInput(option)}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-ink">AI 피드백 톤</label>
-            <div className="flex flex-wrap gap-2">
-              {coachToneOptions.map((option) => (
-                <Button
-                  key={option}
-                  variant={coachToneInput === option ? "primary" : "secondary"}
-                  onClick={() => setCoachToneInput(option)}
-                >
-                  {option}
-                </Button>
-              ))}
-            </div>
-          </div>
-
           <div>
             <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="customDailyTargetInput">
               목표 칼로리 직접 조정
@@ -344,10 +367,200 @@ export default function ReportPage() {
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <Button onClick={handleSaveProfileSettings}>목표 설정 저장</Button>
+          <Button onClick={() => openProfileModal(0)}>온보딩처럼 다시 설정하기</Button>
+          <Button variant="secondary" onClick={handleSaveProfileSettings}>목표 칼로리 저장</Button>
           {profileSaveMessage ? <p className="text-xs text-muted">{profileSaveMessage}</p> : null}
         </div>
       </Card>
+
+      {isProfileModalOpen ? (
+        <div
+          className="fixed inset-0 z-[120] overflow-y-auto bg-[rgba(60,42,24,0.34)] px-4 py-8 backdrop-blur-sm"
+        >
+          <div className="mx-auto flex min-h-full w-full max-w-md items-center">
+            <Card
+              className="w-full overflow-hidden p-0"
+              style={{
+                background:
+                  "linear-gradient(180deg, rgba(255,252,242,0.98), rgba(255,247,233,0.96))",
+              }}
+            >
+              <div className="border-b border-line/70 px-6 pb-5 pt-6">
+                <div className="flex items-center justify-between">
+                  <p className="kitsch-title-soft text-[28px] uppercase tracking-[0.06em]">
+                    Daily OK
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsProfileModalOpen(false)}
+                    className="rounded-full border border-line/80 bg-white/80 px-3 py-1 text-sm font-semibold text-ink"
+                  >
+                    닫기
+                  </button>
+                </div>
+                <div className="mt-4 flex gap-2">
+                  {[0, 1].map((index) => (
+                    <div
+                      key={index}
+                      className="h-2 flex-1 rounded-full"
+                      style={{
+                        background:
+                          index <= profileModalStep
+                            ? "linear-gradient(90deg,#ffd54f,#ffb74d)"
+                            : "rgba(223, 197, 174, 0.5)",
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {profileModalStep === 0 ? (
+                <div className="space-y-5 px-6 py-6">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted">
+                      Tiny survey
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black text-ink">내 리듬을 다시 골라봐요</h2>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      지금 흐름에 맞게 다시 바꾸면 목표 칼로리도 더 자연스럽게 맞춰져요.
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className="mb-3 text-sm font-semibold text-ink">제일 흔들리기 쉬운 건?</p>
+                    <div className="flex flex-wrap gap-2">
+                      {challengeOptions.map((option) => (
+                        <ChoiceChip
+                          key={option}
+                          label={option}
+                          selected={challengeInput === option}
+                          onClick={() => setChallengeInput(option)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="mb-3 text-sm font-semibold text-ink">어떤 속도로 가고 싶어요?</p>
+                    <div className="flex flex-wrap gap-2">
+                      {paceOptions.map((option) => (
+                        <ChoiceChip
+                          key={option}
+                          label={option}
+                          selected={paceInput === option}
+                          onClick={() => setPaceInput(option)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="mb-3 text-sm font-semibold text-ink">AI 피드백 톤은?</p>
+                    <div className="flex flex-wrap gap-2">
+                      {coachToneOptions.map((option) => (
+                        <ChoiceChip
+                          key={option}
+                          label={option}
+                          selected={coachToneInput === option}
+                          onClick={() => setCoachToneInput(option)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="ghost"
+                      className="flex-1 justify-center"
+                      onClick={() => setIsProfileModalOpen(false)}
+                    >
+                      닫기
+                    </Button>
+                    <Button className="flex-1 justify-center" onClick={() => setProfileModalStep(1)}>
+                      다음
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {profileModalStep === 1 ? (
+                <div className="space-y-5 px-6 py-6">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted">
+                      Goal setup
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black text-ink">목표를 다시 적어봐요</h2>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      몸무게와 일정이 바뀌면 앱이 보는 칼로리 기준도 함께 달라져요.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="modalCurrentWeightKg">
+                        현재 몸무게
+                      </label>
+                      <Input
+                        id="modalCurrentWeightKg"
+                        type="number"
+                        value={bodyWeightKgInput}
+                        onChange={(event) => setBodyWeightKgInput(event.target.value)}
+                        placeholder="예: 55"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="modalGoalWeightKg">
+                        목표 몸무게
+                      </label>
+                      <Input
+                        id="modalGoalWeightKg"
+                        type="number"
+                        value={goalWeightKgInput}
+                        onChange={(event) => setGoalWeightKgInput(event.target.value)}
+                        placeholder="예: 50"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-ink" htmlFor="modalTargetDate">
+                        목표 일정
+                      </label>
+                      <Input
+                        id="modalTargetDate"
+                        type="date"
+                        value={targetDateInput}
+                        onChange={(event) => setTargetDateInput(event.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-[22px] border border-line/80 bg-white/75 px-4 py-4">
+                    <p className="text-sm font-semibold text-ink">한 줄 요약</p>
+                    <p className="mt-2 text-sm leading-6 text-muted">
+                      {bodyWeightKgInput || "0"}kg에서 {goalWeightKgInput || "0"}kg까지,{" "}
+                      {targetDateInput || "날짜 미정"} 목표예요.
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      variant="ghost"
+                      className="flex-1 justify-center"
+                      onClick={() => setProfileModalStep(0)}
+                    >
+                      이전
+                    </Button>
+                    <Button className="flex-1 justify-center" onClick={handleSaveProfileFromModal}>
+                      저장하기
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+            </Card>
+          </div>
+        </div>
+      ) : null}
 
       <Card>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">

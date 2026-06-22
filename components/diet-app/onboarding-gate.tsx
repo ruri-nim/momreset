@@ -22,6 +22,8 @@ const challengeOptions: OnboardingProfile["challenge"][] = [
   "단음식",
   "배달음식",
   "불규칙한 식사",
+  "술 마시기",
+  "움직이지 않기",
 ];
 
 const paceOptions: OnboardingProfile["pace"][] = ["가볍게", "꾸준하게", "집중해서"];

@@ -1,12 +1,21 @@
 <svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
   <rect width="192" height="192" rx="44" fill="url(#bg)"/>
   <rect x="14" y="14" width="164" height="164" rx="34" fill="#FFFCEF" stroke="#F2C1B1" stroke-width="4"/>
-  <text x="96" y="82" text-anchor="middle" font-size="44">🍋</text>
-  <text x="96" y="122" text-anchor="middle" font-family="Trebuchet MS, sans-serif" font-size="34" font-weight="900" fill="#2A1F18">OK</text>
+  <circle cx="32" cy="30" r="9" stroke="#F2C1B1" stroke-width="3" opacity="0.8"/>
+  <text x="156" y="34" text-anchor="middle" font-family="Trebuchet MS, sans-serif" font-size="18" font-weight="900" fill="#FF9E6D" transform="rotate(8 156 34)">✦</text>
+  <rect x="60" y="44" width="72" height="72" rx="24" fill="url(#face)" stroke="#2A1F18" stroke-width="4"/>
+  <rect x="79" y="64" width="7" height="14" rx="3.5" fill="#2A1F18"/>
+  <rect x="106" y="64" width="7" height="14" rx="3.5" fill="#2A1F18"/>
+  <path d="M80 87C83.5 95 91 99 96 99C101 99 108.5 95 112 87" stroke="#2A1F18" stroke-width="4" stroke-linecap="round"/>
+  <text x="96" y="144" text-anchor="middle" font-family="Trebuchet MS, sans-serif" font-size="34" font-weight="900" fill="#2A1F18">OK</text>
   <defs>
     <linearGradient id="bg" x1="96" y1="0" x2="96" y2="192" gradientUnits="userSpaceOnUse">
       <stop stop-color="#FFF9B8"/>
       <stop offset="1" stop-color="#FFF5BF"/>
+    </linearGradient>
+    <linearGradient id="face" x1="96" y1="44" x2="96" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFE37A"/>
+      <stop offset="1" stop-color="#FFD45F"/>
     </linearGradient>
   </defs>
 </svg>
