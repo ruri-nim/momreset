@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "Daily OK",
+    "slug": "dailyok-mobile",
+    "scheme": "dailyok",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#bff7e0"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.rurinim.dailyok"
+    },
+    "android": {
+      "package": "com.rurinim.dailyok"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
