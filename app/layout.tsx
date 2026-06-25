@@ -8,8 +8,13 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Daily OK",
+  applicationName: "Daily OK",
   description: "A self-guided diet coach built around calories, OK/X habits, and weekly rules.",
   manifest: "/manifest.webmanifest",
+  icons: {
+    icon: "/icon",
+    apple: "/apple-icon",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -22,6 +27,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#fff6aa",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
