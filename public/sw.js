@@ -1,4 +1,4 @@
-const CACHE_NAME = "daily-ok-v3";
+const CACHE_NAME = "daily-ok-v4";
 const APP_SHELL = ["/", "/manifest.webmanifest", "/offline.html"];
 
 self.addEventListener("install", (event) => {
@@ -32,49 +32,25 @@ self.addEventListener("fetch", (event) => {
 
   const requestUrl = new URL(event.request.url);
 
-  if (requestUrl.pathname.startsWith("/api/")) {
+  if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  if (
+    requestUrl.pathname.startsWith("/api/") ||
+    requestUrl.pathname.startsWith("/_next/") ||
+    requestUrl.searchParams.has("_rsc")
+  ) {
     return;
   }
 
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request)
-        .then((response) => {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-          return response;
-        })
         .catch(async () => {
-          const cachedResponse = await caches.match(event.request);
-          return cachedResponse || caches.match("/offline.html");
+          return caches.match("/offline.html");
         }),
     );
     return;
   }
-
-  if (requestUrl.origin !== self.location.origin) {
-    return;
-  }
-
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
-        return response;
-      })
-      .catch(async () => {
-        const cachedResponse = await caches.match(event.request);
-
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        if (event.request.destination === "document") {
-          return caches.match("/offline.html");
-        }
-
-        return Response.error();
-      }),
-  );
 });
