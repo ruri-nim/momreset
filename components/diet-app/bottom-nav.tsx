@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dumbbell, Home, ListChecks, PieChart, Utensils } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,9 +29,16 @@ export function BottomNav() {
         const Icon = item.icon;
 
         return (
-          <Link
+          <button
             key={item.href}
-            href={item.href}
+            type="button"
+            onClick={() => {
+              if (isActive) {
+                return;
+              }
+
+              window.location.assign(item.href);
+            }}
             className={cn(
               "flex min-w-[68px] flex-col items-center gap-1 rounded-[18px] px-3 py-2 text-[11px] font-extrabold text-muted transition",
               isActive && "text-ink shadow-[inset_0_0_0_1px_rgba(255,255,255,0.75)]",
@@ -41,7 +47,7 @@ export function BottomNav() {
           >
             <Icon className="h-4 w-4" />
             <span>{item.label}</span>
-          </Link>
+          </button>
         );
       })}
     </nav>
