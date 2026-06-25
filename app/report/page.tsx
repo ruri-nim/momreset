@@ -838,15 +838,6 @@ export default function ReportPage() {
                       Google 로그인
                     </Button>
                   ) : null}
-                  {availableProviders.includes("naver") ? (
-                    <Button
-                      variant="secondary"
-                      className="justify-center"
-                      onClick={() => signIn("naver", { callbackUrl: "/report" })}
-                    >
-                      Naver 로그인
-                    </Button>
-                  ) : null}
                 </div>
                 <p className="mt-3 text-xs text-muted">
                   연결한 로그인만 버튼으로 보여줄게요.
@@ -862,7 +853,7 @@ export default function ReportPage() {
                 <p className="mt-2 text-xs leading-6 text-muted">
                   {providerLoadFailed
                     ? "잠시 후 새로고침하거나 개발 서버를 다시 켜서 다시 확인해보세요."
-                    : "`.env.local`에 `AUTH_SECRET`과 Google 또는 Naver 키를 넣고 서버를 다시 켜면 로그인 버튼이 나타나요."}
+                    : "`.env.local`에 `AUTH_SECRET`과 Google 키를 넣고 서버를 다시 켜면 로그인 버튼이 나타나요."}
                 </p>
               </div>
             )}

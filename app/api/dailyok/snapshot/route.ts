@@ -1,137 +1,53 @@
 import { NextResponse } from "next/server";
+import type { CollectionReference, DocumentData } from "firebase-admin/firestore";
 import { auth } from "@/auth";
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import type {
-  DietAppSnapshot,
-  DietFoodItem,
-  OnboardingProfile,
-  RuleHistoryEntry,
-  RuleItem,
-  WeightLogItem,
-} from "@/types/diet-app";
+import { getFirebaseAdminDb, hasFirebaseAdminEnv } from "@/lib/firebase-admin";
+import {
+  buildProfileDocument,
+  buildWeeklyFeedbackFromSnapshot,
+  buildWidgetSummary,
+  emptySnapshot,
+  getAccountKey,
+  hasAnySnapshotData,
+  hydrateOnboardingProfile,
+  normalizeSnapshot,
+  toRuleItem,
+} from "@/lib/firebase-dailyok";
+import type { DietAppSnapshot, DietFoodItem, RuleHistoryEntry, WeightLogItem } from "@/types/diet-app";
 
-type ProfileRow = {
-  account_key: string;
-  display_name: string | null;
-  challenge: string | null;
-  pace: string | null;
-  coach_tone: string | null;
-  current_weight_kg: number | null;
-  goal_weight_kg: number | null;
-  target_date: string | null;
-  custom_daily_target_calories: number | null;
-  created_at: string;
-};
+async function clearCollection(collection: CollectionReference<DocumentData>) {
+  const snapshot = await collection.get();
 
-type FoodRow = {
-  id: string;
-  name: string;
-  calories: number;
-  meal_section: string | null;
-  logged_on: string;
-  portion_multiplier: number;
-  consumed_grams: number | null;
-  source: string | null;
-  note: string | null;
-};
+  if (snapshot.empty) {
+    return;
+  }
 
-type ExerciseRow = {
-  id: string;
-  name: string;
-  minutes: number;
-  burned_calories: number;
-  logged_on: string;
-};
+  const batch = collection.firestore.batch();
 
-type HabitTemplateRow = {
-  id: string;
-  type: string;
-  title: string;
-};
+  snapshot.docs.forEach((doc) => {
+    batch.delete(doc.ref);
+  });
 
-type HabitLogRow = {
-  habit_template_id: string;
-  logged_on: string;
-  status: string;
-};
-
-type WeightRow = {
-  id: string;
-  logged_on: string;
-  weight_kg: number;
-};
-
-function getAccountKey(email?: string | null) {
-  return email?.trim().toLowerCase() ?? null;
+  await batch.commit();
 }
 
-function emptySnapshot(): DietAppSnapshot {
-  return {
-    foodList: [],
-    doRules: [],
-    avoidRules: [],
-    exerciseLogs: [],
-    bodyWeightKg: 55,
-    weightHistory: [],
-    ruleHistory: [],
-    onboardingProfile: null,
-  };
-}
+async function replaceCollection(
+  collection: CollectionReference<DocumentData>,
+  docs: Array<{ id: string; data: DocumentData }>,
+) {
+  await clearCollection(collection);
 
-function hasAnySnapshotData(snapshot: DietAppSnapshot) {
-  return Boolean(
-    snapshot.foodList.length ||
-      snapshot.doRules.length ||
-      snapshot.avoidRules.length ||
-      snapshot.exerciseLogs.length ||
-      snapshot.weightHistory.length ||
-      snapshot.ruleHistory.length ||
-      snapshot.onboardingProfile,
-  );
-}
+  if (!docs.length) {
+    return;
+  }
 
-function buildWidgetSnapshot(snapshot: DietAppSnapshot) {
-  const today = new Date().toISOString().slice(0, 10);
-  const todayFoods = snapshot.foodList.filter((item) => item.loggedAt === today);
-  const todayExercises = snapshot.exerciseLogs.filter((item) => item.loggedAt === today);
-  const todayHistory = snapshot.ruleHistory.find((item) => item.date === today);
-  const targetCalories =
-    snapshot.onboardingProfile?.customDailyTargetCalories ??
-    Math.round((snapshot.bodyWeightKg || snapshot.onboardingProfile?.currentWeightKg || 55) * 30);
-  const netCalories =
-    todayFoods.reduce((sum, item) => sum + item.calories, 0) -
-    todayExercises.reduce((sum, item) => sum + item.burnedCalories, 0);
-  const doDoneCount = Object.values(todayHistory?.doRuleStatuses ?? {}).filter(
-    (status) => status === "done",
-  ).length;
-  const avoidSuccessCount = Object.values(todayHistory?.avoidRuleStatuses ?? {}).filter(
-    (status) => status === "done",
-  ).length;
+  const batch = collection.firestore.batch();
 
-  return {
-    snapshot_date: today,
-    net_calories: netCalories,
-    target_calories: targetCalories,
-    do_done_count: doDoneCount,
-    do_total_count: snapshot.doRules.length,
-    avoid_success_count: avoidSuccessCount,
-    avoid_total_count: snapshot.avoidRules.length,
-  };
-}
+  docs.forEach((item) => {
+    batch.set(collection.doc(item.id), item.data);
+  });
 
-function normalizeSnapshot(payload: unknown): DietAppSnapshot {
-  const snapshot = payload as Partial<DietAppSnapshot> | null;
-
-  return {
-    foodList: Array.isArray(snapshot?.foodList) ? snapshot.foodList : [],
-    doRules: Array.isArray(snapshot?.doRules) ? snapshot.doRules : [],
-    avoidRules: Array.isArray(snapshot?.avoidRules) ? snapshot.avoidRules : [],
-    exerciseLogs: Array.isArray(snapshot?.exerciseLogs) ? snapshot.exerciseLogs : [],
-    bodyWeightKg: typeof snapshot?.bodyWeightKg === "number" ? snapshot.bodyWeightKg : 55,
-    weightHistory: Array.isArray(snapshot?.weightHistory) ? snapshot.weightHistory : [],
-    ruleHistory: Array.isArray(snapshot?.ruleHistory) ? snapshot.ruleHistory : [],
-    onboardingProfile: snapshot?.onboardingProfile ?? null,
-  };
+  await batch.commit();
 }
 
 export async function GET() {
@@ -141,7 +57,7 @@ export async function GET() {
     return NextResponse.json({ enabled: false, authenticated: false, snapshot: emptySnapshot() });
   }
 
-  if (!supabaseAdmin) {
+  if (!hasFirebaseAdminEnv()) {
     return NextResponse.json({ enabled: false, authenticated: true, snapshot: emptySnapshot() });
   }
 
@@ -151,107 +67,85 @@ export async function GET() {
     return NextResponse.json({ enabled: false, authenticated: true, snapshot: emptySnapshot() });
   }
 
-  const [profileResult, foodsResult, exercisesResult, templatesResult, logsResult, weightsResult] =
+  const db = getFirebaseAdminDb();
+  const userRef = db.collection("users").doc(accountKey);
+
+  const [profileDoc, foodSnapshot, exerciseSnapshot, ruleTemplateSnapshot, ruleLogSnapshot, weightSnapshot] =
     await Promise.all([
-      supabaseAdmin.from("profiles").select("*").eq("account_key", accountKey).maybeSingle(),
-      supabaseAdmin.from("food_logs").select("*").eq("account_key", accountKey).order("logged_on", { ascending: false }),
-      supabaseAdmin.from("exercise_logs").select("*").eq("account_key", accountKey).order("logged_on", { ascending: false }),
-      supabaseAdmin.from("habit_templates").select("*").eq("account_key", accountKey).eq("is_active", true).order("sort_order", { ascending: true }),
-      supabaseAdmin.from("habit_logs").select("*").eq("account_key", accountKey).order("logged_on", { ascending: false }),
-      supabaseAdmin.from("weight_logs").select("*").eq("account_key", accountKey).order("logged_on", { ascending: false }),
+      userRef.collection("profile").doc("main").get(),
+      userRef.collection("foodLogs").orderBy("loggedAt", "desc").get(),
+      userRef.collection("exerciseLogs").orderBy("loggedAt", "desc").get(),
+      userRef.collection("ruleTemplates").orderBy("sortOrder", "asc").get(),
+      userRef.collection("ruleLogs").orderBy("date", "desc").get(),
+      userRef.collection("weightLogs").orderBy("date", "desc").get(),
     ]);
 
-  const profileRow = (profileResult.data ?? null) as ProfileRow | null;
-  const foodRows = (foodsResult.data ?? []) as unknown as FoodRow[];
-  const exerciseRows = (exercisesResult.data ?? []) as unknown as ExerciseRow[];
-  const templateRows = (templatesResult.data ?? []) as unknown as HabitTemplateRow[];
-  const logRows = (logsResult.data ?? []) as unknown as HabitLogRow[];
-  const weightRows = (weightsResult.data ?? []) as unknown as WeightRow[];
+  const doRules = ruleTemplateSnapshot.docs
+    .filter((doc) => doc.data().type === "do" && doc.data().isActive !== false)
+    .map((doc) => toRuleItem(doc.id, doc.data()));
+  const avoidRules = ruleTemplateSnapshot.docs
+    .filter((doc) => doc.data().type === "avoid" && doc.data().isActive !== false)
+    .map((doc) => toRuleItem(doc.id, doc.data()));
 
-  const templateMap = new Map(templateRows.map((item) => [item.id, item]));
-  const doRules: RuleItem[] = [];
-  const avoidRules: RuleItem[] = [];
+  const ruleHistory: RuleHistoryEntry[] = ruleLogSnapshot.docs.map((doc) => {
+    const data = doc.data();
 
-  templateRows.forEach((item) => {
-    const nextRule: RuleItem = {
-      id: item.id,
-      title: item.title,
-      status: "pending",
+    return {
+      date: String(data.date ?? doc.id),
+      doRuleStatuses: (data.doRuleStatuses as RuleHistoryEntry["doRuleStatuses"]) ?? {},
+      avoidRuleStatuses: (data.avoidRuleStatuses as RuleHistoryEntry["avoidRuleStatuses"]) ?? {},
     };
-
-    if (item.type === "do") {
-      doRules.push(nextRule);
-    } else {
-      avoidRules.push(nextRule);
-    }
   });
 
-  const historyMap = new Map<string, RuleHistoryEntry>();
+  const weightHistory: WeightLogItem[] = weightSnapshot.docs.map((doc) => {
+    const data = doc.data();
 
-  logRows.forEach((item) => {
-    const template = templateMap.get(item.habit_template_id);
-
-    if (!template) {
-      return;
-    }
-
-    const entry = historyMap.get(item.logged_on) ?? {
-      date: item.logged_on,
-      doRuleStatuses: {},
-      avoidRuleStatuses: {},
+    return {
+      id: doc.id,
+      date: String(data.date ?? ""),
+      weightKg: Number(data.weightKg ?? 0),
     };
-
-    if (template.type === "do") {
-      entry.doRuleStatuses[item.habit_template_id] = item.status as RuleItem["status"];
-    } else {
-      entry.avoidRuleStatuses[item.habit_template_id] = item.status as RuleItem["status"];
-    }
-
-    historyMap.set(item.logged_on, entry);
   });
 
-  const onboardingProfile: OnboardingProfile | null = profileRow
-    ? {
-        completedAt: profileRow.created_at,
-        challenge: (profileRow.challenge as OnboardingProfile["challenge"]) ?? "야식",
-        pace: (profileRow.pace as OnboardingProfile["pace"]) ?? "꾸준하게",
-        coachTone: (profileRow.coach_tone as OnboardingProfile["coachTone"]) ?? "발랄하게",
-        currentWeightKg: Number(profileRow.current_weight_kg ?? 55),
-        goalWeightKg: Number(profileRow.goal_weight_kg ?? 50),
-        targetDate: profileRow.target_date ?? new Date().toISOString().slice(0, 10),
-        customDailyTargetCalories: profileRow.custom_daily_target_calories ?? undefined,
-      }
-    : null;
+  const onboardingProfile = hydrateOnboardingProfile(
+    profileDoc.exists ? (profileDoc.data() as Record<string, unknown>) : undefined,
+  );
 
   const snapshot: DietAppSnapshot = {
-    foodList: foodRows.map((item) => ({
-      id: item.id,
-      name: item.name,
-      calories: item.calories,
-      mealSection: (item.meal_section as DietFoodItem["mealSection"]) ?? "간식",
-      loggedAt: item.logged_on,
-      portionMultiplier: Number(item.portion_multiplier ?? 1),
-      consumedGrams: item.consumed_grams ?? undefined,
-      source: (item.source as DietFoodItem["source"]) ?? undefined,
-      note: item.note ?? undefined,
-    })),
+    foodList: foodSnapshot.docs.map((doc) => {
+      const data = doc.data();
+
+      return {
+        id: doc.id,
+        name: String(data.name ?? ""),
+        calories: Number(data.calories ?? 0),
+        mealSection: (data.mealSection as DietFoodItem["mealSection"]) ?? "간식",
+        loggedAt: String(data.loggedAt ?? ""),
+        portionMultiplier:
+          typeof data.portionMultiplier === "number" ? data.portionMultiplier : undefined,
+        consumedGrams:
+          typeof data.consumedGrams === "number" ? data.consumedGrams : undefined,
+        source: (data.source as DietFoodItem["source"]) ?? undefined,
+        note: typeof data.note === "string" ? data.note : undefined,
+      };
+    }),
     doRules,
     avoidRules,
-    exerciseLogs: exerciseRows.map((item) => ({
-      id: item.id,
-      name: item.name,
-      minutes: item.minutes,
-      burnedCalories: item.burned_calories,
-      loggedAt: item.logged_on,
-    })),
+    exerciseLogs: exerciseSnapshot.docs.map((doc) => {
+      const data = doc.data();
+
+      return {
+        id: doc.id,
+        name: String(data.name ?? ""),
+        minutes: Number(data.minutes ?? 0),
+        burnedCalories: Number(data.burnedCalories ?? 0),
+        loggedAt: String(data.loggedAt ?? ""),
+      };
+    }),
     bodyWeightKg:
-      Number(weightRows[0]?.weight_kg ?? profileRow?.current_weight_kg ?? 55),
-    weightHistory: weightRows.map((item) => ({
-      id: item.id,
-      date: item.logged_on,
-      weightKg: Number(item.weight_kg),
-    })),
-    ruleHistory: [...historyMap.values()].sort((a, b) => (a.date < b.date ? 1 : -1)),
+      weightHistory[0]?.weightKg ?? onboardingProfile?.currentWeightKg ?? 55,
+    weightHistory,
+    ruleHistory,
     onboardingProfile,
   };
 
@@ -270,7 +164,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, authenticated: false }, { status: 401 });
   }
 
-  if (!supabaseAdmin) {
+  if (!hasFirebaseAdminEnv()) {
     return NextResponse.json({ ok: false, enabled: false }, { status: 200 });
   }
 
@@ -281,126 +175,123 @@ export async function POST(request: Request) {
   }
 
   const snapshot = normalizeSnapshot(await request.json());
-  const widgetSnapshot = buildWidgetSnapshot(snapshot);
+  const db = getFirebaseAdminDb();
+  const userRef = db.collection("users").doc(accountKey);
+  const updatedAt = new Date().toISOString();
 
-  const profilePayload = snapshot.onboardingProfile
-    ? {
-        account_key: accountKey,
-        display_name: session.user.name ?? null,
-        challenge: snapshot.onboardingProfile.challenge,
-        pace: snapshot.onboardingProfile.pace,
-        coach_tone: snapshot.onboardingProfile.coachTone,
-        current_weight_kg: snapshot.bodyWeightKg ?? snapshot.onboardingProfile.currentWeightKg,
-        goal_weight_kg: snapshot.onboardingProfile.goalWeightKg,
-        target_date: snapshot.onboardingProfile.targetDate,
-        custom_daily_target_calories:
-          snapshot.onboardingProfile.customDailyTargetCalories ?? null,
-      }
-    : null;
+  const profilePayload = buildProfileDocument({
+    accountKey,
+    displayName: session.user.name ?? null,
+    snapshot,
+  });
 
   if (profilePayload) {
-    await supabaseAdmin
-      .from("profiles")
-      .upsert(profilePayload as never, { onConflict: "account_key" });
+    await userRef.collection("profile").doc("main").set(profilePayload, { merge: true });
+  } else {
+    await userRef.collection("profile").doc("main").delete().catch(() => {});
   }
 
-  await Promise.all([
-    supabaseAdmin.from("food_logs").delete().eq("account_key", accountKey),
-    supabaseAdmin.from("exercise_logs").delete().eq("account_key", accountKey),
-    supabaseAdmin.from("habit_logs").delete().eq("account_key", accountKey),
-    supabaseAdmin.from("habit_templates").delete().eq("account_key", accountKey),
-    supabaseAdmin.from("weight_logs").delete().eq("account_key", accountKey),
-  ]);
-
-  if (snapshot.foodList.length) {
-    const foodPayload = snapshot.foodList.map((item) => ({
-        id: item.id,
-        account_key: accountKey,
-        logged_on: item.loggedAt,
-        meal_section: item.mealSection,
+  await replaceCollection(
+    userRef.collection("foodLogs"),
+    snapshot.foodList.map((item) => ({
+      id: item.id,
+      data: {
         name: item.name,
         calories: item.calories,
-        portion_multiplier: item.portionMultiplier ?? 1,
-        consumed_grams: item.consumedGrams ?? null,
+        mealSection: item.mealSection,
+        loggedAt: item.loggedAt,
+        portionMultiplier: item.portionMultiplier ?? 1,
+        consumedGrams: item.consumedGrams ?? null,
         source: item.source ?? null,
         note: item.note ?? null,
-      }));
+        updatedAt,
+      },
+    })),
+  );
 
-    await supabaseAdmin.from("food_logs").insert(foodPayload as never);
-  }
-
-  if (snapshot.exerciseLogs.length) {
-    const exercisePayload = snapshot.exerciseLogs.map((item) => ({
-        id: item.id,
-        account_key: accountKey,
-        logged_on: item.loggedAt ?? new Date().toISOString().slice(0, 10),
+  await replaceCollection(
+    userRef.collection("exerciseLogs"),
+    snapshot.exerciseLogs.map((item) => ({
+      id: item.id,
+      data: {
         name: item.name,
         minutes: item.minutes,
-        burned_calories: item.burnedCalories,
-      }));
-
-    await supabaseAdmin.from("exercise_logs").insert(exercisePayload as never);
-  }
-
-  const habitTemplates = [
-    ...snapshot.doRules.map((item, index) => ({
-      id: item.id,
-      account_key: accountKey,
-      type: "do",
-      title: item.title,
-      sort_order: index,
-      is_active: true,
+        burnedCalories: item.burnedCalories,
+        loggedAt: item.loggedAt ?? updatedAt.slice(0, 10),
+        updatedAt,
+      },
     })),
-    ...snapshot.avoidRules.map((item, index) => ({
-      id: item.id,
-      account_key: accountKey,
-      type: "avoid",
-      title: item.title,
-      sort_order: index,
-      is_active: true,
-    })),
-  ];
+  );
 
-  if (habitTemplates.length) {
-    await supabaseAdmin.from("habit_templates").insert(habitTemplates as never);
-  }
-
-  const habitLogs = snapshot.ruleHistory.flatMap((entry) => [
-    ...Object.entries(entry.doRuleStatuses).map(([habitTemplateId, status]) => ({
-      account_key: accountKey,
-      habit_template_id: habitTemplateId,
-      logged_on: entry.date,
-      status,
-    })),
-    ...Object.entries(entry.avoidRuleStatuses).map(([habitTemplateId, status]) => ({
-      account_key: accountKey,
-      habit_template_id: habitTemplateId,
-      logged_on: entry.date,
-      status,
-    })),
-  ]);
-
-  if (habitLogs.length) {
-    await supabaseAdmin.from("habit_logs").insert(habitLogs as never);
-  }
-
-  if (snapshot.weightHistory.length) {
-    const weightPayload = snapshot.weightHistory.map((item) => ({
+  await replaceCollection(
+    userRef.collection("ruleTemplates"),
+    [
+      ...snapshot.doRules.map((item, index) => ({
         id: item.id,
-        account_key: accountKey,
-        logged_on: item.date,
-        weight_kg: item.weightKg,
-      }));
+        data: {
+          title: item.title,
+          type: "do",
+          isActive: true,
+          sortOrder: index,
+          updatedAt,
+        },
+      })),
+      ...snapshot.avoidRules.map((item, index) => ({
+        id: item.id,
+        data: {
+          title: item.title,
+          type: "avoid",
+          isActive: true,
+          sortOrder: index,
+          updatedAt,
+        },
+      })),
+    ],
+  );
 
-    await supabaseAdmin.from("weight_logs").insert(weightPayload as never);
-  }
+  await replaceCollection(
+    userRef.collection("ruleLogs"),
+    snapshot.ruleHistory.map((entry) => ({
+      id: entry.date,
+      data: {
+        date: entry.date,
+        doRuleStatuses: entry.doRuleStatuses,
+        avoidRuleStatuses: entry.avoidRuleStatuses,
+        updatedAt,
+      },
+    })),
+  );
 
-  await supabaseAdmin.from("widget_snapshots").upsert(
-    ({
-      account_key: accountKey,
-      ...widgetSnapshot,
-    }) as never,
-    { onConflict: "account_key" },
+  await replaceCollection(
+    userRef.collection("weightLogs"),
+    snapshot.weightHistory.map((item) => ({
+      id: item.id,
+      data: {
+        date: item.date,
+        weightKg: item.weightKg,
+        updatedAt,
+      },
+    })),
+  );
+
+  const widgetSummary = buildWidgetSummary(snapshot);
+  await userRef.collection("widgetSummary").doc(widgetSummary.date).set(widgetSummary, {
+    merge: true,
+  });
+
+  const weekly = buildWeeklyFeedbackFromSnapshot(snapshot);
+  await userRef.collection("weeklyFeedback").doc(weekly.weekKey).set(
+    {
+      weekKey: weekly.weekKey,
+      summary: weekly.feedback.summary,
+      goodJob: weekly.feedback.goodJob,
+      watchOut: weekly.feedback.watchOut,
+      nextAction: weekly.feedback.nextAction,
+      source: "snapshot-fallback",
+      generatedAt: updatedAt,
+      summaryData: weekly.summary,
+    },
+    { merge: true },
   );
 
   return NextResponse.json({ ok: true });

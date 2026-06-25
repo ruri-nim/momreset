@@ -154,14 +154,14 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
     window.location.reload();
   };
 
-  const handleSocialStart = async (provider: "google" | "naver") => {
+  const handleSocialStart = async () => {
     const saved = persistOnboarding();
 
     if (!saved) {
       return;
     }
 
-    await signIn(provider, { callbackUrl: "/" });
+    await signIn("google", { callbackUrl: "/" });
   };
 
   const addRuleItem = (
@@ -544,18 +544,8 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
 
                     <div className="mt-4 grid gap-3">
                       {availableProviders.includes("google") ? (
-                        <Button className="w-full justify-center" onClick={() => void handleSocialStart("google")}>
+                        <Button className="w-full justify-center" onClick={() => void handleSocialStart()}>
                           Google로 시작하기
-                        </Button>
-                      ) : null}
-
-                      {availableProviders.includes("naver") ? (
-                        <Button
-                          variant="secondary"
-                          className="w-full justify-center"
-                          onClick={() => void handleSocialStart("naver")}
-                        >
-                          Naver로 시작하기
                         </Button>
                       ) : null}
 

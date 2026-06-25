@@ -1,5 +1,8 @@
 import OpenAI from "openai";
 import { NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { getFirebaseAdminDb, hasFirebaseAdminEnv } from "@/lib/firebase-admin";
+import { getAccountKey } from "@/lib/firebase-dailyok";
 import {
   generateRuleBasedWeeklyFeedback,
   type WeeklyAiFeedback,
@@ -29,8 +32,42 @@ export async function POST(request: Request) {
     }
 
     const fallback = generateRuleBasedWeeklyFeedback(summary);
+    const saveFeedback = async (
+      feedback: WeeklyAiFeedback,
+      source: "ai" | "fallback",
+    ) => {
+      const session = await auth();
+      const accountKey = getAccountKey(session?.user?.email);
+
+      if (!accountKey || !hasFirebaseAdminEnv()) {
+        return;
+      }
+
+      const db = getFirebaseAdminDb();
+      const weekKey = `${summary.startDate}_${summary.endDate}`;
+
+      await db
+        .collection("users")
+        .doc(accountKey)
+        .collection("weeklyFeedback")
+        .doc(weekKey)
+        .set(
+          {
+            weekKey,
+            summary: feedback.summary,
+            goodJob: feedback.goodJob,
+            watchOut: feedback.watchOut,
+            nextAction: feedback.nextAction,
+            source,
+            generatedAt: new Date().toISOString(),
+            summaryData: summary,
+          },
+          { merge: true },
+        );
+    };
 
     if (!process.env.OPENAI_API_KEY) {
+      await saveFeedback(fallback, "fallback");
       return NextResponse.json({ feedback: fallback, source: "fallback" });
     }
 
@@ -71,9 +108,11 @@ export async function POST(request: Request) {
     const parsed = parseFeedbackPayload(response.output_text || "");
 
     if (!parsed) {
+      await saveFeedback(fallback, "fallback");
       return NextResponse.json({ feedback: fallback, source: "fallback" });
     }
 
+    await saveFeedback(parsed, "ai");
     return NextResponse.json({ feedback: parsed, source: "ai" });
   } catch {
     return NextResponse.json(
