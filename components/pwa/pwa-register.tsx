@@ -8,22 +8,11 @@ export function PwaRegister() {
       return;
     }
 
-    let hasRefreshed = false;
-
     navigator.serviceWorker
-      .register("/sw.js")
-      .then(() => {
-        navigator.serviceWorker.addEventListener("controllerchange", () => {
-          if (hasRefreshed) {
-            return;
-          }
-
-          hasRefreshed = true;
-          window.location.reload();
-        });
-      })
+      .getRegistrations()
+      .then((registrations) => Promise.all(registrations.map((registration) => registration.unregister())))
       .catch(() => {
-        // PWA registration should never block app usage.
+        // Service worker cleanup should never block app usage.
       });
   }, []);
 
