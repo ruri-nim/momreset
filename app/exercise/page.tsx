@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import StatCard from "@/components/common/StatCard";
 import { AppShell } from "@/components/diet-app/app-shell";
 import { Badge } from "@/components/ui/badge";
@@ -36,7 +36,6 @@ export default function ExercisePage() {
   const [editingExerciseMinutes, setEditingExerciseMinutes] = useState("");
   const [editingExerciseCalories, setEditingExerciseCalories] = useState("");
   const [editingLoggedAt, setEditingLoggedAt] = useState(getLocalDateKey());
-  const hasSkippedInitialSave = useRef(false);
 
   useEffect(() => {
     const loadData = () => {
@@ -51,15 +50,6 @@ export default function ExercisePage() {
       window.removeEventListener(DAILYOK_LOCAL_EVENT, loadData);
     };
   }, []);
-
-  useEffect(() => {
-    if (!hasSkippedInitialSave.current) {
-      hasSkippedInitialSave.current = true;
-      return;
-    }
-
-    saveExerciseLogs(exerciseLogs);
-  }, [exerciseLogs]);
 
   useEffect(() => {
     if (isManualCalories) {
@@ -96,6 +86,16 @@ export default function ExercisePage() {
     ),
   }));
 
+  const updateExerciseLogs = (
+    updater: ExerciseLogItem[] | ((prev: ExerciseLogItem[]) => ExerciseLogItem[]),
+  ) => {
+    setExerciseLogs((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      saveExerciseLogs(next);
+      return next;
+    });
+  };
+
   const handleQuickAdd = (item: {
     id: string;
     name: string;
@@ -110,11 +110,11 @@ export default function ExercisePage() {
       loggedAt: todayKey,
     };
 
-    setExerciseLogs((prev) => [nextItem, ...prev]);
+    updateExerciseLogs((prev) => [nextItem, ...prev]);
   };
 
   const handleDelete = (id: string) => {
-    setExerciseLogs((prev) => prev.filter((item) => item.id !== id));
+    updateExerciseLogs((prev) => prev.filter((item) => item.id !== id));
   };
 
   const handleStartEdit = (item: ExerciseLogItem) => {
@@ -143,7 +143,7 @@ export default function ExercisePage() {
       return;
     }
 
-    setExerciseLogs((prev) =>
+    updateExerciseLogs((prev) =>
       prev.map((item) =>
         item.id === editingExerciseId
           ? {
@@ -200,7 +200,7 @@ export default function ExercisePage() {
       loggedAt: todayKey,
     };
 
-    setExerciseLogs((prev) => [nextItem, ...prev]);
+    updateExerciseLogs((prev) => [nextItem, ...prev]);
     resetRecordDialog();
   };
 

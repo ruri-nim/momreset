@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { AppShell } from "@/components/diet-app/app-shell";
 import { CheckRow } from "@/components/diet-app/check-row";
 import { Badge } from "@/components/ui/badge";
@@ -52,8 +52,6 @@ export default function RulesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newRuleTitle, setNewRuleTitle] = useState("");
   const [newRuleType, setNewRuleType] = useState<"do" | "avoid">("do");
-  const hasSkippedInitialDoSave = useRef(false);
-  const hasSkippedInitialAvoidSave = useRef(false);
 
   useEffect(() => {
     const loadData = () => {
@@ -83,24 +81,6 @@ export default function RulesPage() {
     };
   }, [todayKey]);
 
-  useEffect(() => {
-    if (!hasSkippedInitialDoSave.current) {
-      hasSkippedInitialDoSave.current = true;
-      return;
-    }
-
-    saveDoRules(doRules);
-  }, [doRules]);
-
-  useEffect(() => {
-    if (!hasSkippedInitialAvoidSave.current) {
-      hasSkippedInitialAvoidSave.current = true;
-      return;
-    }
-
-    saveAvoidRules(avoidRules);
-  }, [avoidRules]);
-
   const updateRuleStatus = (
     type: "do" | "avoid",
     id: string,
@@ -109,6 +89,7 @@ export default function RulesPage() {
     if (type === "do") {
       setDoRules((prev) => {
         const next = prev.map((item) => (item.id === id ? { ...item, status } : item));
+        saveDoRules(next);
         saveRuleStatusesForDate(todayKey, next, avoidRules);
         return next;
       });
@@ -117,6 +98,7 @@ export default function RulesPage() {
 
     setAvoidRules((prev) => {
       const next = prev.map((item) => (item.id === id ? { ...item, status } : item));
+      saveAvoidRules(next);
       saveRuleStatusesForDate(todayKey, doRules, next);
       return next;
     });
@@ -126,6 +108,7 @@ export default function RulesPage() {
     if (type === "do") {
       setDoRules((prev) => {
         const next = prev.filter((item) => item.id !== id);
+        saveDoRules(next);
         saveRuleStatusesForDate(todayKey, next, avoidRules);
         return next;
       });
@@ -134,6 +117,7 @@ export default function RulesPage() {
 
     setAvoidRules((prev) => {
       const next = prev.filter((item) => item.id !== id);
+      saveAvoidRules(next);
       saveRuleStatusesForDate(todayKey, doRules, next);
       return next;
     });
@@ -162,12 +146,14 @@ export default function RulesPage() {
     if (newRuleType === "do") {
       setDoRules((prev) => {
         const next = [...prev, nextRule];
+        saveDoRules(next);
         saveRuleStatusesForDate(todayKey, next, avoidRules);
         return next;
       });
     } else {
       setAvoidRules((prev) => {
         const next = [...prev, nextRule];
+        saveAvoidRules(next);
         saveRuleStatusesForDate(todayKey, doRules, next);
         return next;
       });
@@ -194,6 +180,7 @@ export default function RulesPage() {
     if (isAvoid) {
       setAvoidRules((prev) => {
         const next = [...prev, nextRule];
+        saveAvoidRules(next);
         saveRuleStatusesForDate(todayKey, doRules, next);
         return next;
       });
@@ -202,6 +189,7 @@ export default function RulesPage() {
 
     setDoRules((prev) => {
       const next = [...prev, nextRule];
+      saveDoRules(next);
       saveRuleStatusesForDate(todayKey, next, avoidRules);
       return next;
     });
