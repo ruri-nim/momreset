@@ -51,34 +51,35 @@ async function replaceCollection(
 }
 
 export async function GET() {
-  const session = await auth();
+  try {
+    const session = await auth();
 
-  if (!session?.user?.email) {
-    return NextResponse.json({ enabled: false, authenticated: false, snapshot: emptySnapshot() });
-  }
+    if (!session?.user?.email) {
+      return NextResponse.json({ enabled: false, authenticated: false, snapshot: emptySnapshot() });
+    }
 
-  if (!hasFirebaseAdminEnv()) {
-    return NextResponse.json({ enabled: false, authenticated: true, snapshot: emptySnapshot() });
-  }
+    if (!hasFirebaseAdminEnv()) {
+      return NextResponse.json({ enabled: false, authenticated: true, snapshot: emptySnapshot() });
+    }
 
-  const accountKey = getAccountKey(session.user.email);
+    const accountKey = getAccountKey(session.user.email);
 
-  if (!accountKey) {
-    return NextResponse.json({ enabled: false, authenticated: true, snapshot: emptySnapshot() });
-  }
+    if (!accountKey) {
+      return NextResponse.json({ enabled: false, authenticated: true, snapshot: emptySnapshot() });
+    }
 
-  const db = getFirebaseAdminDb();
-  const userRef = db.collection("users").doc(accountKey);
+    const db = getFirebaseAdminDb();
+    const userRef = db.collection("users").doc(accountKey);
 
-  const [profileDoc, foodSnapshot, exerciseSnapshot, ruleTemplateSnapshot, ruleLogSnapshot, weightSnapshot] =
-    await Promise.all([
-      userRef.collection("profile").doc("main").get(),
-      userRef.collection("foodLogs").orderBy("loggedAt", "desc").get(),
-      userRef.collection("exerciseLogs").orderBy("loggedAt", "desc").get(),
-      userRef.collection("ruleTemplates").orderBy("sortOrder", "asc").get(),
-      userRef.collection("ruleLogs").orderBy("date", "desc").get(),
-      userRef.collection("weightLogs").orderBy("date", "desc").get(),
-    ]);
+    const [profileDoc, foodSnapshot, exerciseSnapshot, ruleTemplateSnapshot, ruleLogSnapshot, weightSnapshot] =
+      await Promise.all([
+        userRef.collection("profile").doc("main").get(),
+        userRef.collection("foodLogs").orderBy("loggedAt", "desc").get(),
+        userRef.collection("exerciseLogs").orderBy("loggedAt", "desc").get(),
+        userRef.collection("ruleTemplates").orderBy("sortOrder", "asc").get(),
+        userRef.collection("ruleLogs").orderBy("date", "desc").get(),
+        userRef.collection("weightLogs").orderBy("date", "desc").get(),
+      ]);
 
   const doRules = ruleTemplateSnapshot.docs
     .filter((doc) => doc.data().type === "do" && doc.data().isActive !== false)
@@ -149,35 +150,47 @@ export async function GET() {
     onboardingProfile,
   };
 
-  return NextResponse.json({
-    enabled: true,
-    authenticated: true,
-    hasServerData: hasAnySnapshotData(snapshot),
-    snapshot,
-  });
+    return NextResponse.json({
+      enabled: true,
+      authenticated: true,
+      hasServerData: hasAnySnapshotData(snapshot),
+      snapshot,
+    });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        enabled: false,
+        authenticated: true,
+        error: error instanceof Error ? error.message : "snapshot read failed",
+        snapshot: emptySnapshot(),
+      },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request) {
-  const session = await auth();
+  try {
+    const session = await auth();
 
-  if (!session?.user?.email) {
-    return NextResponse.json({ ok: false, authenticated: false }, { status: 401 });
-  }
+    if (!session?.user?.email) {
+      return NextResponse.json({ ok: false, authenticated: false }, { status: 401 });
+    }
 
-  if (!hasFirebaseAdminEnv()) {
-    return NextResponse.json({ ok: false, enabled: false }, { status: 200 });
-  }
+    if (!hasFirebaseAdminEnv()) {
+      return NextResponse.json({ ok: false, enabled: false }, { status: 200 });
+    }
 
-  const accountKey = getAccountKey(session.user.email);
+    const accountKey = getAccountKey(session.user.email);
 
-  if (!accountKey) {
-    return NextResponse.json({ ok: false }, { status: 400 });
-  }
+    if (!accountKey) {
+      return NextResponse.json({ ok: false }, { status: 400 });
+    }
 
-  const snapshot = normalizeSnapshot(await request.json());
-  const db = getFirebaseAdminDb();
-  const userRef = db.collection("users").doc(accountKey);
-  const updatedAt = new Date().toISOString();
+    const snapshot = normalizeSnapshot(await request.json());
+    const db = getFirebaseAdminDb();
+    const userRef = db.collection("users").doc(accountKey);
+    const updatedAt = new Date().toISOString();
 
   const profilePayload = buildProfileDocument({
     accountKey,
@@ -294,5 +307,14 @@ export async function POST(request: Request) {
     { merge: true },
   );
 
-  return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "snapshot write failed",
+      },
+      { status: 500 },
+    );
+  }
 }
