@@ -39,6 +39,49 @@ function hasLocalData(snapshot: DietAppSnapshot) {
   );
 }
 
+function mergeById<T extends { id: string }>(localItems: T[], serverItems: T[]) {
+  const itemsById = new Map<string, T>();
+
+  serverItems.forEach((item) => {
+    itemsById.set(item.id, item);
+  });
+  localItems.forEach((item) => {
+    itemsById.set(item.id, item);
+  });
+
+  return [...itemsById.values()];
+}
+
+function mergeRuleHistory(
+  localHistory: DietAppSnapshot["ruleHistory"],
+  serverHistory: DietAppSnapshot["ruleHistory"],
+) {
+  const entriesByDate = new Map<string, DietAppSnapshot["ruleHistory"][number]>();
+
+  serverHistory.forEach((entry) => {
+    entriesByDate.set(entry.date, entry);
+  });
+  localHistory.forEach((entry) => {
+    entriesByDate.set(entry.date, entry);
+  });
+
+  return [...entriesByDate.values()].sort((a, b) => (a.date < b.date ? 1 : -1));
+}
+
+function mergeSnapshots(localSnapshot: DietAppSnapshot, serverSnapshot: DietAppSnapshot) {
+  return {
+    foodList: mergeById(localSnapshot.foodList, serverSnapshot.foodList),
+    doRules: mergeById(localSnapshot.doRules, serverSnapshot.doRules),
+    avoidRules: mergeById(localSnapshot.avoidRules, serverSnapshot.avoidRules),
+    exerciseLogs: mergeById(localSnapshot.exerciseLogs, serverSnapshot.exerciseLogs),
+    bodyWeightKg:
+      localSnapshot.bodyWeightKg !== 55 ? localSnapshot.bodyWeightKg : serverSnapshot.bodyWeightKg,
+    weightHistory: mergeById(localSnapshot.weightHistory, serverSnapshot.weightHistory),
+    ruleHistory: mergeRuleHistory(localSnapshot.ruleHistory, serverSnapshot.ruleHistory),
+    onboardingProfile: localSnapshot.onboardingProfile ?? serverSnapshot.onboardingProfile,
+  };
+}
+
 function writeSnapshotToLocal(snapshot: DietAppSnapshot) {
   window.localStorage.setItem(DIET_APP_STORAGE_KEYS.foodList, JSON.stringify(snapshot.foodList));
   window.localStorage.setItem(DIET_APP_STORAGE_KEYS.doRules, JSON.stringify(snapshot.doRules));
@@ -89,13 +132,28 @@ export function SessionSync() {
         }
 
         const localSnapshot = readLocalSnapshot();
+        const localHasData = hasLocalData(localSnapshot);
 
         if (payload.hasServerData) {
-          writeSnapshotToLocal(payload.snapshot);
+          const nextSnapshot = localHasData
+            ? mergeSnapshots(localSnapshot, payload.snapshot)
+            : payload.snapshot;
+
+          writeSnapshotToLocal(nextSnapshot);
+
+          if (localHasData) {
+            await fetch("/api/dailyok/snapshot", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(nextSnapshot),
+            });
+          }
           return;
         }
 
-        if (hasLocalData(localSnapshot)) {
+        if (localHasData) {
           await fetch("/api/dailyok/snapshot", {
             method: "POST",
             headers: {

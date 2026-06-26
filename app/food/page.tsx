@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import StatCard from "@/components/common/StatCard";
 import FoodSearchDialog from "@/components/food/FoodSearchDialog";
 import { AppShell } from "@/components/diet-app/app-shell";
@@ -75,7 +75,6 @@ export default function FoodPage() {
   const [editingMealSection, setEditingMealSection] = useState<MealSection>("간식");
   const [editingLoggedAt, setEditingLoggedAt] = useState(getLocalDateKey());
   const [dailyTargetCalories, setDailyTargetCalories] = useState(DEFAULT_DAILY_TARGET_CALORIES);
-  const hasSkippedInitialSave = useRef(false);
 
   useEffect(() => {
     const loadData = () => {
@@ -93,14 +92,15 @@ export default function FoodPage() {
     };
   }, []);
 
-  useEffect(() => {
-    if (!hasSkippedInitialSave.current) {
-      hasSkippedInitialSave.current = true;
-      return;
-    }
-
-    saveFoodList(foodList);
-  }, [foodList]);
+  const updateFoodList = (
+    updater: DietFoodItem[] | ((prev: DietFoodItem[]) => DietFoodItem[]),
+  ) => {
+    setFoodList((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      saveFoodList(next);
+      return next;
+    });
+  };
 
   const todayKey = getLocalDateKey();
   const yesterdayKey = getDateKeyDaysAgo(1);
@@ -151,7 +151,7 @@ export default function FoodPage() {
       }),
     };
 
-    setFoodList((prev) => [newFood, ...prev]);
+    updateFoodList((prev) => [newFood, ...prev]);
     setFoodName("");
     setCalories("");
     setPortionMultiplier("1");
@@ -180,11 +180,11 @@ export default function FoodPage() {
       }),
     };
 
-    setFoodList((prev) => [nextFood, ...prev]);
+    updateFoodList((prev) => [nextFood, ...prev]);
   };
 
   const handleDeleteFood = (id: string) => {
-    setFoodList((prev) => prev.filter((item) => item.id !== id));
+    updateFoodList((prev) => prev.filter((item) => item.id !== id));
   };
 
   const handleRepeatYesterdayMeal = (section: MealSection) => {
@@ -225,7 +225,7 @@ export default function FoodPage() {
       }),
     }));
 
-    setFoodList((prev) => [...copiedFoods, ...prev]);
+    updateFoodList((prev) => [...copiedFoods, ...prev]);
   };
 
   const handleStartEdit = (food: DietFoodItem) => {
@@ -243,7 +243,7 @@ export default function FoodPage() {
       return;
     }
 
-    setFoodList((prev) =>
+    updateFoodList((prev) =>
       prev.map((item) =>
         item.id === editingFoodId
           ? {
