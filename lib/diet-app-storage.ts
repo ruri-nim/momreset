@@ -69,9 +69,26 @@ function queueServerSync() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(readSnapshotFromStorage()),
-    }).catch(() => {
-      // Guests or offline users can keep using local storage without interruption.
-    });
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          console.warn("Daily OK server sync failed", await response.text());
+          return;
+        }
+
+        const payload = (await response.json().catch(() => null)) as {
+          ok?: boolean;
+          enabled?: boolean;
+        } | null;
+
+        if (payload?.ok === false) {
+          console.warn("Daily OK server sync disabled or rejected", payload);
+        }
+      })
+      .catch((error) => {
+        console.warn("Daily OK server sync skipped", error);
+        // Guests or offline users can keep using local storage without interruption.
+      });
   }, 300);
 }
 
