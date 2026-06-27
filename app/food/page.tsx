@@ -90,11 +90,9 @@ export default function FoodPage() {
   const updateFoodList = (
     updater: DietFoodItem[] | ((prev: DietFoodItem[]) => DietFoodItem[]),
   ) => {
-    setFoodList((prev) => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
-      saveFoodList(next);
-      return next;
-    });
+    const next = typeof updater === "function" ? updater(foodList) : updater;
+    setFoodList(next);
+    saveFoodList(next);
   };
 
   const todayKey = getLocalDateKey();

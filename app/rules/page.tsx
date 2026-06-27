@@ -95,38 +95,30 @@ export default function RulesPage() {
     status: RuleItem["status"],
   ) => {
     if (type === "do") {
-      setDoRules((prev) => {
-        const next = prev.map((item) => (item.id === id ? { ...item, status } : item));
-        saveRuleStatusesForDate(viewDateKey, next, avoidRules);
-        return next;
-      });
+      const next = doRules.map((item) => (item.id === id ? { ...item, status } : item));
+      setDoRules(next);
+      saveRuleStatusesForDate(viewDateKey, next, avoidRules);
       return;
     }
 
-    setAvoidRules((prev) => {
-      const next = prev.map((item) => (item.id === id ? { ...item, status } : item));
-      saveRuleStatusesForDate(viewDateKey, doRules, next);
-      return next;
-    });
+    const next = avoidRules.map((item) => (item.id === id ? { ...item, status } : item));
+    setAvoidRules(next);
+    saveRuleStatusesForDate(viewDateKey, doRules, next);
   };
 
   const deleteRule = (type: "do" | "avoid", id: string) => {
     if (type === "do") {
-      setDoRules((prev) => {
-        const next = prev.filter((item) => item.id !== id);
-        saveDoRules(next);
-        saveRuleStatusesForDate(viewDateKey, next, avoidRules);
-        return next;
-      });
+      const next = doRules.filter((item) => item.id !== id);
+      setDoRules(next);
+      saveDoRules(next);
+      saveRuleStatusesForDate(viewDateKey, next, avoidRules);
       return;
     }
 
-    setAvoidRules((prev) => {
-      const next = prev.filter((item) => item.id !== id);
-      saveAvoidRules(next);
-      saveRuleStatusesForDate(viewDateKey, doRules, next);
-      return next;
-    });
+    const next = avoidRules.filter((item) => item.id !== id);
+    setAvoidRules(next);
+    saveAvoidRules(next);
+    saveRuleStatusesForDate(viewDateKey, doRules, next);
   };
 
   const addRule = () => {
@@ -150,19 +142,15 @@ export default function RulesPage() {
     };
 
     if (newRuleType === "do") {
-      setDoRules((prev) => {
-        const next = [...prev, nextRule];
-        saveDoRules(next);
-        saveRuleStatusesForDate(viewDateKey, next, avoidRules);
-        return next;
-      });
+      const next = [...doRules, nextRule];
+      setDoRules(next);
+      saveDoRules(next);
+      saveRuleStatusesForDate(viewDateKey, next, avoidRules);
     } else {
-      setAvoidRules((prev) => {
-        const next = [...prev, nextRule];
-        saveAvoidRules(next);
-        saveRuleStatusesForDate(viewDateKey, doRules, next);
-        return next;
-      });
+      const next = [...avoidRules, nextRule];
+      setAvoidRules(next);
+      saveAvoidRules(next);
+      saveRuleStatusesForDate(viewDateKey, doRules, next);
     }
 
     setNewRuleTitle("");
@@ -184,21 +172,17 @@ export default function RulesPage() {
     };
 
     if (isAvoid) {
-      setAvoidRules((prev) => {
-        const next = [...prev, nextRule];
-        saveAvoidRules(next);
-        saveRuleStatusesForDate(viewDateKey, doRules, next);
-        return next;
-      });
+      const next = [...avoidRules, nextRule];
+      setAvoidRules(next);
+      saveAvoidRules(next);
+      saveRuleStatusesForDate(viewDateKey, doRules, next);
       return;
     }
 
-    setDoRules((prev) => {
-      const next = [...prev, nextRule];
-      saveDoRules(next);
-      saveRuleStatusesForDate(viewDateKey, next, avoidRules);
-      return next;
-    });
+    const next = [...doRules, nextRule];
+    setDoRules(next);
+    saveDoRules(next);
+    saveRuleStatusesForDate(viewDateKey, next, avoidRules);
   };
 
   return (

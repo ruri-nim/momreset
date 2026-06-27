@@ -77,11 +77,17 @@ export function findExercisePresetByName(name: string) {
     return null;
   }
 
+  const exactMatch = exercisePresets.find(
+    (preset) => preset.name.toLowerCase() === normalizedName,
+  );
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
   return (
-    exercisePresets.find(
-      (preset) =>
-        preset.name.toLowerCase() === normalizedName ||
-        preset.keywords.some((keyword) => normalizedName.includes(keyword.toLowerCase())),
+    exercisePresets.find((preset) =>
+      preset.keywords.some((keyword) => normalizedName.includes(keyword.toLowerCase())),
     ) ?? null
   );
 }

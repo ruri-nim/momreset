@@ -97,11 +97,9 @@ export default function ExercisePage() {
   const updateExerciseLogs = (
     updater: ExerciseLogItem[] | ((prev: ExerciseLogItem[]) => ExerciseLogItem[]),
   ) => {
-    setExerciseLogs((prev) => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
-      saveExerciseLogs(next);
-      return next;
-    });
+    const next = typeof updater === "function" ? updater(exerciseLogs) : updater;
+    setExerciseLogs(next);
+    saveExerciseLogs(next);
   };
 
   const handleQuickAdd = (item: {
