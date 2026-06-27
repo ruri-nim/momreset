@@ -46,7 +46,11 @@ function formatWeekLabel(date: Date) {
 
 export default function RulesPage() {
   const todayKey = getLocalDateKey();
-  const weekLabel = formatWeekLabel(new Date());
+  const [viewDateKey, setViewDateKey] = useState(todayKey);
+  const viewDate = new Date(`${viewDateKey}T12:00:00`);
+  const isToday = viewDateKey === todayKey;
+  const dateLabel = isToday ? "오늘" : `${viewDate.getMonth() + 1}월 ${viewDate.getDate()}일`;
+  const weekLabel = formatWeekLabel(viewDate);
   const [doRules, setDoRules] = useState<RuleItem[]>([]);
   const [avoidRules, setAvoidRules] = useState<RuleItem[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -57,7 +61,7 @@ export default function RulesPage() {
     const loadData = () => {
       const savedDoRules = loadDoRules();
       const savedAvoidRules = loadAvoidRules();
-      const todayHistory = getRuleHistoryForDate(todayKey);
+      const todayHistory = getRuleHistoryForDate(viewDateKey);
 
       setDoRules(
         savedDoRules.map((item) => ({
@@ -74,12 +78,16 @@ export default function RulesPage() {
     };
 
     loadData();
+    const requestedDate = new URLSearchParams(window.location.search).get("date");
+    if (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+      setViewDateKey(requestedDate);
+    }
     window.addEventListener(DAILYOK_LOCAL_EVENT, loadData);
 
     return () => {
       window.removeEventListener(DAILYOK_LOCAL_EVENT, loadData);
     };
-  }, [todayKey]);
+  }, [viewDateKey]);
 
   const updateRuleStatus = (
     type: "do" | "avoid",
@@ -89,8 +97,7 @@ export default function RulesPage() {
     if (type === "do") {
       setDoRules((prev) => {
         const next = prev.map((item) => (item.id === id ? { ...item, status } : item));
-        saveDoRules(next);
-        saveRuleStatusesForDate(todayKey, next, avoidRules);
+        saveRuleStatusesForDate(viewDateKey, next, avoidRules);
         return next;
       });
       return;
@@ -98,8 +105,7 @@ export default function RulesPage() {
 
     setAvoidRules((prev) => {
       const next = prev.map((item) => (item.id === id ? { ...item, status } : item));
-      saveAvoidRules(next);
-      saveRuleStatusesForDate(todayKey, doRules, next);
+      saveRuleStatusesForDate(viewDateKey, doRules, next);
       return next;
     });
   };
@@ -109,7 +115,7 @@ export default function RulesPage() {
       setDoRules((prev) => {
         const next = prev.filter((item) => item.id !== id);
         saveDoRules(next);
-        saveRuleStatusesForDate(todayKey, next, avoidRules);
+        saveRuleStatusesForDate(viewDateKey, next, avoidRules);
         return next;
       });
       return;
@@ -118,7 +124,7 @@ export default function RulesPage() {
     setAvoidRules((prev) => {
       const next = prev.filter((item) => item.id !== id);
       saveAvoidRules(next);
-      saveRuleStatusesForDate(todayKey, doRules, next);
+      saveRuleStatusesForDate(viewDateKey, doRules, next);
       return next;
     });
   };
@@ -147,14 +153,14 @@ export default function RulesPage() {
       setDoRules((prev) => {
         const next = [...prev, nextRule];
         saveDoRules(next);
-        saveRuleStatusesForDate(todayKey, next, avoidRules);
+        saveRuleStatusesForDate(viewDateKey, next, avoidRules);
         return next;
       });
     } else {
       setAvoidRules((prev) => {
         const next = [...prev, nextRule];
         saveAvoidRules(next);
-        saveRuleStatusesForDate(todayKey, doRules, next);
+        saveRuleStatusesForDate(viewDateKey, doRules, next);
         return next;
       });
     }
@@ -181,7 +187,7 @@ export default function RulesPage() {
       setAvoidRules((prev) => {
         const next = [...prev, nextRule];
         saveAvoidRules(next);
-        saveRuleStatusesForDate(todayKey, doRules, next);
+        saveRuleStatusesForDate(viewDateKey, doRules, next);
         return next;
       });
       return;
@@ -190,7 +196,7 @@ export default function RulesPage() {
     setDoRules((prev) => {
       const next = [...prev, nextRule];
       saveDoRules(next);
-      saveRuleStatusesForDate(todayKey, next, avoidRules);
+      saveRuleStatusesForDate(viewDateKey, next, avoidRules);
       return next;
     });
   };
@@ -199,9 +205,10 @@ export default function RulesPage() {
     <AppShell
       eyebrow="Weekly rules"
       title="Rules"
-      description="이번 주에 지키고 싶은 규칙을 내 방식대로 정해보세요."
+      description={`${dateLabel} 규칙의 성공과 실패를 기록해보세요.`}
     >
       <div className="flex flex-wrap gap-2">
+        {!isToday ? <Badge>{dateLabel} 기록 수정 중</Badge> : null}
         <Badge>해야 할 일 {doRules.length}개</Badge>
         <Badge
           style={{ background: "rgb(var(--color-peach) / 0.95)", color: "rgb(var(--color-ink))" }}
@@ -228,9 +235,11 @@ export default function RulesPage() {
             </p>
             <h2 className="mt-2 text-xl font-semibold text-ink">해야 할 일</h2>
           </div>
-          <Button variant="secondary" onClick={() => { setNewRuleType("do"); setDialogOpen(true); }}>
-            항목 추가
-          </Button>
+          {isToday ? (
+            <Button variant="secondary" onClick={() => { setNewRuleType("do"); setDialogOpen(true); }}>
+              항목 추가
+            </Button>
+          ) : null}
         </div>
         <div className="mt-4 space-y-3">
           {doRules.map((item) => (
@@ -239,7 +248,7 @@ export default function RulesPage() {
               item={item}
               tone="do"
               onChangeStatus={(id, status) => updateRuleStatus("do", id, status)}
-              onDelete={(id) => deleteRule("do", id)}
+              onDelete={isToday ? (id) => deleteRule("do", id) : undefined}
             />
           ))}
         </div>
@@ -253,15 +262,17 @@ export default function RulesPage() {
             </p>
             <h2 className="mt-2 text-xl font-semibold text-ink">피해야 할 일</h2>
           </div>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setNewRuleType("avoid");
-              setDialogOpen(true);
-            }}
-          >
-            항목 추가
-          </Button>
+          {isToday ? (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setNewRuleType("avoid");
+                setDialogOpen(true);
+              }}
+            >
+              항목 추가
+            </Button>
+          ) : null}
         </div>
         <div className="mt-4 space-y-3">
           {avoidRules.map((item) => (
@@ -270,13 +281,13 @@ export default function RulesPage() {
               item={item}
               tone="avoid"
               onChangeStatus={(id, status) => updateRuleStatus("avoid", id, status)}
-              onDelete={(id) => deleteRule("avoid", id)}
+              onDelete={isToday ? (id) => deleteRule("avoid", id) : undefined}
             />
           ))}
         </div>
       </Card>
 
-      <Card>
+      {isToday ? <Card>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
           Suggestions
         </p>
@@ -296,7 +307,7 @@ export default function RulesPage() {
             </button>
           ))}
         </div>
-      </Card>
+      </Card> : null}
 
       <Dialog
         open={dialogOpen}

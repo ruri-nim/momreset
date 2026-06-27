@@ -30,6 +30,8 @@ export interface DietFoodItem {
   calories: number;
   mealSection: MealSection;
   loggedAt: string;
+  baseCalories?: number;
+  baseServingGrams?: number;
   portionMultiplier?: number;
   consumedGrams?: number;
   source?: "manual" | "search";

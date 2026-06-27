@@ -122,6 +122,10 @@ export async function GET() {
         calories: Number(data.calories ?? 0),
         mealSection: (data.mealSection as DietFoodItem["mealSection"]) ?? "간식",
         loggedAt: String(data.loggedAt ?? ""),
+        baseCalories:
+          typeof data.baseCalories === "number" ? data.baseCalories : undefined,
+        baseServingGrams:
+          typeof data.baseServingGrams === "number" ? data.baseServingGrams : undefined,
         portionMultiplier:
           typeof data.portionMultiplier === "number" ? data.portionMultiplier : undefined,
         consumedGrams:
@@ -213,6 +217,8 @@ export async function POST(request: Request) {
         calories: item.calories,
         mealSection: item.mealSection,
         loggedAt: item.loggedAt,
+        baseCalories: item.baseCalories ?? null,
+        baseServingGrams: item.baseServingGrams ?? null,
         portionMultiplier: item.portionMultiplier ?? 1,
         consumedGrams: item.consumedGrams ?? null,
         source: item.source ?? null,

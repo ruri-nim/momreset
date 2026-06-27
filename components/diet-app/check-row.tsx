@@ -33,7 +33,7 @@ export function CheckRow({
       <div>
         <p className="text-sm font-semibold text-ink">{item.title}</p>
         <p className="mt-1 text-xs text-muted">
-          {tone === "do" ? "했어요 / 못했어요" : "피했어요 / 실패했어요"}
+          성공 또는 실패로 기록해보세요.
         </p>
       </div>
       <div
@@ -74,7 +74,7 @@ export function CheckRow({
             }}
           >
             {item.status === "done" ? `${successEmoji} ` : ""}
-            {tone === "do" ? "했어요" : "피했어요"}
+            성공
           </button>
           <button
             type="button"
@@ -91,7 +91,7 @@ export function CheckRow({
             }}
           >
             {item.status === "failed" ? `${failEmoji} ` : ""}
-            {tone === "do" ? "못했어요" : "실패했어요"}
+            실패
           </button>
           {showPendingAction ? (
             <button

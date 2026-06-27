@@ -58,23 +58,20 @@ export function normalizeSnapshot(payload: unknown): DietAppSnapshot {
 
 export function getSmileLevelForDay(
   totalCalories: number,
-  hasExercise: boolean,
+  hasFood: boolean,
   doneCount: number,
   failedCount: number,
   targetCalories: number,
 ): SmileLevel {
-  const hasFood = totalCalories > 0;
-
-  if (!hasFood && !hasExercise && doneCount === 0 && failedCount === 0) {
+  if (!hasFood && doneCount === 0 && failedCount === 0) {
     return "neutral";
   }
 
   if (
     hasFood &&
     totalCalories <= targetCalories &&
-    hasExercise &&
     failedCount === 0 &&
-    doneCount >= 1
+    doneCount >= 2
   ) {
     return "very_happy";
   }
@@ -134,8 +131,8 @@ export function buildWidgetSummary(snapshot: DietAppSnapshot, baseDate = new Dat
     avoidDoneCount,
     avoidTotalCount: snapshot.avoidRules.length,
     smileLevel: getSmileLevelForDay(
-      intakeCalories,
-      exerciseCalories > 0,
+      intakeCalories - exerciseCalories,
+      todayFoods.length > 0,
       doDoneCount + avoidDoneCount,
       failedCount,
       targetCalories,

@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { createMealRecord } from "@/lib/food-utils";
+import { calculateCaloriesForGrams, parseServingGrams } from "@/lib/food-calories";
 import type { FoodSearchItem, MealCategory, MealRecord } from "@/types/food";
 
 interface FoodSearchDialogProps {
@@ -26,7 +27,6 @@ export default function FoodSearchDialog({
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedItem, setSelectedItem] = useState<FoodSearchItem | null>(null);
-  const [selectedPortionMultiplier, setSelectedPortionMultiplier] = useState(1);
   const [selectedConsumedGrams, setSelectedConsumedGrams] = useState("");
 
   const helperText = useMemo(() => {
@@ -63,8 +63,7 @@ export default function FoodSearchDialog({
 
   function handleStartAdd(item: FoodSearchItem) {
     setSelectedItem(item);
-    setSelectedPortionMultiplier(1);
-    setSelectedConsumedGrams("");
+    setSelectedConsumedGrams(String(parseServingGrams(item.servingSize)));
   }
 
   function handleConfirmAdd() {
@@ -75,7 +74,7 @@ export default function FoodSearchDialog({
     onAddMeal(
       createMealRecord(
         selectedItem,
-        selectedPortionMultiplier,
+        1,
         mealCategory,
         selectedConsumedGrams ? Number(selectedConsumedGrams) : undefined,
       ),
@@ -139,7 +138,7 @@ export default function FoodSearchDialog({
 
         <div className="rounded-2xl bg-peach/70 px-4 py-3 text-sm leading-6 text-muted">
           검색 결과 칼로리는 보통 <span className="font-semibold text-ink">100g / 100mL 또는 1회분 기준</span>이에요.
-          원하는 음식을 먼저 고른 뒤, 다음 단계에서 배수와 g를 적어 저장할 수 있어요.
+          원하는 음식을 먼저 고른 뒤, 다음 단계에서 먹은 g을 적어 저장할 수 있어요.
         </div>
 
         <p className="text-sm text-muted">{helperText}</p>
@@ -161,18 +160,7 @@ export default function FoodSearchDialog({
               </Button>
             </div>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-ink">섭취량 배수</label>
-                <Input
-                  type="number"
-                  min="0.5"
-                  max="3"
-                  step="0.5"
-                  value={selectedPortionMultiplier}
-                  onChange={(event) => setSelectedPortionMultiplier(Number(event.target.value))}
-                />
-              </div>
+            <div className="mt-4">
               <div>
                 <label className="mb-2 block text-sm font-semibold text-ink">섭취량(g)</label>
                 <Input
@@ -184,11 +172,15 @@ export default function FoodSearchDialog({
                   placeholder="예: 180"
                 />
               </div>
-            </div>
+              </div>
 
             <div className="mt-4 rounded-2xl bg-peach/70 px-4 py-3 text-sm text-muted">
               {mealCategory}으로 저장되고,
-              {` ${Math.round(selectedItem.calories * selectedPortionMultiplier)} kcal`}로 기록돼요.
+              {` ${calculateCaloriesForGrams(
+                selectedItem.calories,
+                parseServingGrams(selectedItem.servingSize),
+                Number(selectedConsumedGrams),
+              )} kcal`}로 기록돼요.
               {selectedConsumedGrams ? ` 섭취량은 ${selectedConsumedGrams}g으로 함께 남아요.` : ""}
             </div>
 
@@ -234,7 +226,7 @@ export default function FoodSearchDialog({
                   {item.fat !== undefined ? <Badge>{item.fat}g 지방</Badge> : null}
                 </div>
                 <p className="mt-2 text-xs leading-5 text-muted">
-                  {mealCategory}으로 기록돼요. 먼저 추가를 누르면 배수와 g를 정한 뒤 저장할 수 있어요.
+                  {mealCategory}으로 기록돼요. 추가를 누른 뒤 먹은 g을 정해 저장할 수 있어요.
                 </p>
               </div>
               <Button variant="secondary" onClick={() => handleStartAdd(item)}>

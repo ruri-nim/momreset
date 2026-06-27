@@ -10,7 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { calculateDailyTargetCalories, DEFAULT_DAILY_TARGET_CALORIES } from "@/lib/diet-app-calorie-target";
-import { getDateKeyDaysAgo, getLocalDateKey } from "@/lib/diet-app-date";
+import { getLocalDateKey } from "@/lib/diet-app-date";
+import { calculateCaloriesForGrams, parseServingGrams } from "@/lib/food-calories";
 import {
   DAILYOK_LOCAL_EVENT,
   loadBodyWeightKg,
@@ -32,28 +33,17 @@ function getSectionFromMealType(mealType: string): MealSection {
   return "간식";
 }
 
-function formatFoodMeta(portionMultiplier?: number, consumedGrams?: number) {
-  const meta: string[] = [];
-
-  if (portionMultiplier && portionMultiplier !== 1) {
-    meta.push(`${portionMultiplier}배`);
-  }
-
-  if (consumedGrams) {
-    meta.push(`${consumedGrams}g`);
-  }
-
-  return meta.join(" · ");
+function formatFoodMeta(consumedGrams?: number) {
+  return consumedGrams ? `${consumedGrams}g` : "";
 }
 
 function buildFoodNote(item: {
   mealSection: MealSection;
   source?: "manual" | "search";
-  portionMultiplier?: number;
   consumedGrams?: number;
 }) {
   const sourceLabel = item.source === "search" ? "검색 결과" : "직접 입력";
-  const meta = formatFoodMeta(item.portionMultiplier, item.consumedGrams);
+  const meta = formatFoodMeta(item.consumedGrams);
 
   return [item.mealSection, sourceLabel, meta].filter(Boolean).join(" · ");
 }
@@ -61,7 +51,6 @@ function buildFoodNote(item: {
 export default function FoodPage() {
   const [foodName, setFoodName] = useState("");
   const [calories, setCalories] = useState("");
-  const [portionMultiplier, setPortionMultiplier] = useState("1");
   const [consumedGrams, setConsumedGrams] = useState("");
   const [manualMealSection, setManualMealSection] = useState<MealSection>("간식");
   const [foodList, setFoodList] = useState<DietFoodItem[]>([]);
@@ -70,11 +59,13 @@ export default function FoodPage() {
   const [editingFoodId, setEditingFoodId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [editingCalories, setEditingCalories] = useState("");
-  const [editingPortionMultiplier, setEditingPortionMultiplier] = useState("1");
   const [editingConsumedGrams, setEditingConsumedGrams] = useState("");
+  const [editingBaseCalories, setEditingBaseCalories] = useState(0);
+  const [editingBaseServingGrams, setEditingBaseServingGrams] = useState(100);
   const [editingMealSection, setEditingMealSection] = useState<MealSection>("간식");
   const [editingLoggedAt, setEditingLoggedAt] = useState(getLocalDateKey());
   const [dailyTargetCalories, setDailyTargetCalories] = useState(DEFAULT_DAILY_TARGET_CALORIES);
+  const [viewDateKey, setViewDateKey] = useState(getLocalDateKey());
 
   useEffect(() => {
     const loadData = () => {
@@ -85,6 +76,10 @@ export default function FoodPage() {
     };
 
     loadData();
+    const requestedDate = new URLSearchParams(window.location.search).get("date");
+    if (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+      setViewDateKey(requestedDate);
+    }
     window.addEventListener(DAILYOK_LOCAL_EVENT, loadData);
 
     return () => {
@@ -103,8 +98,13 @@ export default function FoodPage() {
   };
 
   const todayKey = getLocalDateKey();
-  const yesterdayKey = getDateKeyDaysAgo(1);
-  const todayFoodList = foodList.filter((item) => item.loggedAt === todayKey);
+  const viewDate = new Date(`${viewDateKey}T12:00:00`);
+  const previousDate = new Date(viewDate);
+  previousDate.setDate(previousDate.getDate() - 1);
+  const yesterdayKey = getLocalDateKey(previousDate);
+  const isToday = viewDateKey === todayKey;
+  const dateLabel = isToday ? "오늘" : `${viewDate.getMonth() + 1}월 ${viewDate.getDate()}일`;
+  const todayFoodList = foodList.filter((item) => item.loggedAt === viewDateKey);
   const yesterdayFoodList = foodList.filter((item) => item.loggedAt === yesterdayKey);
   const totalCalories = todayFoodList.reduce((sum, item) => sum + item.calories, 0);
   const targetPercent = Math.min(
@@ -139,14 +139,14 @@ export default function FoodPage() {
       name: foodName,
       calories: Number(calories),
       mealSection: manualMealSection,
-      loggedAt: todayKey,
-      portionMultiplier: Number(portionMultiplier) || 1,
+      loggedAt: viewDateKey,
+      baseCalories: Number(calories),
+      baseServingGrams: consumedGrams ? Number(consumedGrams) : 100,
       consumedGrams: consumedGrams ? Number(consumedGrams) : undefined,
       source: "manual",
       note: buildFoodNote({
         mealSection: manualMealSection,
         source: "manual",
-        portionMultiplier: Number(portionMultiplier) || 1,
         consumedGrams: consumedGrams ? Number(consumedGrams) : undefined,
       }),
     };
@@ -154,29 +154,34 @@ export default function FoodPage() {
     updateFoodList((prev) => [newFood, ...prev]);
     setFoodName("");
     setCalories("");
-    setPortionMultiplier("1");
     setConsumedGrams("");
     setManualMealSection("간식");
     return true;
   };
 
   const handleAddMealFromSearch = (meal: MealRecord) => {
-    const adjustedCalories = Math.round(meal.calories * meal.portionMultiplier);
+    const baseServingGrams = parseServingGrams(meal.servingSize);
+    const grams = meal.consumedGrams ?? baseServingGrams;
+    const adjustedCalories = calculateCaloriesForGrams(
+      meal.calories,
+      baseServingGrams,
+      grams,
+    );
 
     const nextFood: DietFoodItem = {
       id: meal.id,
       name: meal.name,
       calories: adjustedCalories,
       mealSection: meal.category,
-      loggedAt: meal.loggedAt.slice(0, 10),
-      portionMultiplier: meal.portionMultiplier,
-      consumedGrams: meal.consumedGrams,
+      loggedAt: viewDateKey,
+      baseCalories: meal.calories,
+      baseServingGrams,
+      consumedGrams: grams,
       source: "search",
       note: buildFoodNote({
         mealSection: meal.category,
         source: "search",
-        portionMultiplier: meal.portionMultiplier,
-        consumedGrams: meal.consumedGrams,
+        consumedGrams: grams,
       }),
     };
 
@@ -205,7 +210,7 @@ export default function FoodPage() {
 
     if (alreadyHasSimilarSet) {
       const shouldContinue = window.confirm(
-        `오늘 ${section}에 비슷한 음식이 이미 있어요. 그래도 한 번 더 추가할까요?`,
+        `${dateLabel} ${section}에 비슷한 음식이 이미 있어요. 그래도 한 번 더 추가할까요?`,
       );
 
       if (!shouldContinue) {
@@ -216,11 +221,10 @@ export default function FoodPage() {
     const copiedFoods = sectionFoods.map((item) => ({
       ...item,
       id: crypto.randomUUID(),
-      loggedAt: todayKey,
+      loggedAt: viewDateKey,
       note: buildFoodNote({
         mealSection: section,
         source: item.source ?? "manual",
-        portionMultiplier: item.portionMultiplier,
         consumedGrams: item.consumedGrams,
       }),
     }));
@@ -232,8 +236,9 @@ export default function FoodPage() {
     setEditingFoodId(food.id);
     setEditingName(food.name);
     setEditingCalories(String(food.calories));
-    setEditingPortionMultiplier(String(food.portionMultiplier ?? 1));
     setEditingConsumedGrams(food.consumedGrams ? String(food.consumedGrams) : "");
+    setEditingBaseCalories(food.baseCalories ?? food.calories);
+    setEditingBaseServingGrams(food.baseServingGrams ?? food.consumedGrams ?? 100);
     setEditingMealSection(food.mealSection);
     setEditingLoggedAt(food.loggedAt);
   };
@@ -252,12 +257,13 @@ export default function FoodPage() {
               calories: Number(editingCalories),
               mealSection: editingMealSection,
               loggedAt: editingLoggedAt,
-              portionMultiplier: Number(editingPortionMultiplier) || 1,
+              baseCalories: editingBaseCalories,
+              baseServingGrams: editingBaseServingGrams,
+              portionMultiplier: undefined,
               consumedGrams: editingConsumedGrams ? Number(editingConsumedGrams) : undefined,
               note: buildFoodNote({
                 mealSection: editingMealSection,
                 source: item.source ?? (item.note?.includes("검색 결과") ? "search" : "manual"),
-                portionMultiplier: Number(editingPortionMultiplier) || 1,
                 consumedGrams: editingConsumedGrams ? Number(editingConsumedGrams) : undefined,
               }),
             }
@@ -268,8 +274,9 @@ export default function FoodPage() {
     setEditingFoodId(null);
     setEditingName("");
     setEditingCalories("");
-    setEditingPortionMultiplier("1");
     setEditingConsumedGrams("");
+    setEditingBaseCalories(0);
+    setEditingBaseServingGrams(100);
     setEditingMealSection("간식");
     setEditingLoggedAt(getLocalDateKey());
   };
@@ -278,8 +285,9 @@ export default function FoodPage() {
     setEditingFoodId(null);
     setEditingName("");
     setEditingCalories("");
-    setEditingPortionMultiplier("1");
     setEditingConsumedGrams("");
+    setEditingBaseCalories(0);
+    setEditingBaseServingGrams(100);
     setEditingMealSection("간식");
     setEditingLoggedAt(getLocalDateKey());
   };
@@ -288,11 +296,11 @@ export default function FoodPage() {
     <AppShell
       eyebrow="Food log"
       title="Food"
-      description="오늘 먹은 음식과 칼로리를 편하게 기록해보세요."
+      description={`${dateLabel} 먹은 음식과 칼로리를 편하게 기록해보세요.`}
     >
       <Card>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-          Today intake
+          {isToday ? "Today intake" : "Selected date"}
         </p>
         <h2 className="mt-2 text-xl font-semibold text-ink">{totalCalories} kcal</h2>
         <p className="mt-1 text-sm text-muted">
@@ -301,7 +309,7 @@ export default function FoodPage() {
       </Card>
 
       <div className="flex flex-wrap gap-2">
-        <Badge>오늘 총 {totalCalories} kcal</Badge>
+        <Badge>{dateLabel} 총 {totalCalories} kcal</Badge>
         <Badge style={{ background: "rgb(var(--color-peach) / 0.95)", color: "rgb(var(--color-ink))" }}>
           {recordedSections.length ? recordedSections.join(" · ") : "아직 기록 전"}
         </Badge>
@@ -311,11 +319,11 @@ export default function FoodPage() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-              Today foods
+              {isToday ? "Today foods" : "Food log"}
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-ink">오늘 기록한 음식</h2>
+            <h2 className="mt-2 text-xl font-semibold text-ink">{dateLabel} 기록한 음식</h2>
             <p className="mt-1 text-sm text-muted">
-              오늘 먹은 음식이 여기에 차곡차곡 쌓여요.
+              {dateLabel} 먹은 음식이 여기에 차곡차곡 쌓여요.
             </p>
           </div>
           <div className="rounded-full bg-sage/80 px-4 py-2 text-sm font-semibold text-ink">
@@ -393,7 +401,7 @@ export default function FoodPage() {
 
       <div className="grid grid-cols-2 gap-3">
         <StatCard
-          label="오늘 섭취"
+          label={`${dateLabel} 섭취`}
           value={`${totalCalories} kcal`}
           helper="현재까지 누적"
           accent="rose"
@@ -412,7 +420,7 @@ export default function FoodPage() {
         </p>
         <h2 className="mt-2 text-xl font-semibold text-ink">빠른 기록 버튼</h2>
         <p className="mt-2 text-sm leading-6 text-muted">
-          어제 먹었던 아침, 점심, 저녁 세트를 오늘로 빠르게 다시 넣을 수 있어요.
+          바로 전날 먹었던 아침, 점심, 저녁 세트를 {dateLabel} 기록으로 빠르게 넣을 수 있어요.
         </p>
 
         <div className="mt-4 space-y-3">
@@ -423,11 +431,11 @@ export default function FoodPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold text-ink">어제 {section}</p>
+                  <p className="text-sm font-semibold text-ink">바로 전날 {section}</p>
                   <p className="mt-1 text-xs leading-5 text-muted">
                     {items.length
                       ? items.map((item) => item.name).join(", ")
-                      : `어제 ${section} 기록이 없어요.`}
+                      : `바로 전날 ${section} 기록이 없어요.`}
                   </p>
                 </div>
                 <Button
@@ -496,21 +504,6 @@ export default function FoodPage() {
               value={foodName}
               onChange={(e) => setFoodName(e.target.value)}
               placeholder="예: 바나나, 닭가슴살 샐러드"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="portionMultiplier" className="mb-2 block text-sm font-semibold text-ink">
-              섭취량 배수
-            </label>
-            <Input
-              id="portionMultiplier"
-              type="number"
-              min="0.5"
-              step="0.5"
-              value={portionMultiplier}
-              onChange={(e) => setPortionMultiplier(e.target.value)}
-              placeholder="예: 1, 1.5"
             />
           </div>
 
@@ -606,23 +599,6 @@ export default function FoodPage() {
 
           <div>
             <label
-              htmlFor="editingPortionMultiplier"
-              className="mb-2 block text-sm font-semibold text-ink"
-            >
-              섭취량 배수
-            </label>
-            <Input
-              id="editingPortionMultiplier"
-              type="number"
-              min="0.5"
-              step="0.5"
-              value={editingPortionMultiplier}
-              onChange={(e) => setEditingPortionMultiplier(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <label
               htmlFor="editingConsumedGrams"
               className="mb-2 block text-sm font-semibold text-ink"
             >
@@ -634,7 +610,21 @@ export default function FoodPage() {
               min="0"
               step="1"
               value={editingConsumedGrams}
-              onChange={(e) => setEditingConsumedGrams(e.target.value)}
+              onChange={(e) => {
+                const nextGrams = e.target.value;
+                setEditingConsumedGrams(nextGrams);
+                if (nextGrams) {
+                  setEditingCalories(
+                    String(
+                      calculateCaloriesForGrams(
+                        editingBaseCalories,
+                        editingBaseServingGrams,
+                        Number(nextGrams),
+                      ),
+                    ),
+                  );
+                }
+              }}
             />
           </div>
 
@@ -649,7 +639,11 @@ export default function FoodPage() {
               id="editingCalories"
               type="number"
               value={editingCalories}
-              onChange={(e) => setEditingCalories(e.target.value)}
+              onChange={(e) => {
+                setEditingCalories(e.target.value);
+                setEditingBaseCalories(Number(e.target.value));
+                setEditingBaseServingGrams(Number(editingConsumedGrams) || 100);
+              }}
             />
           </div>
 

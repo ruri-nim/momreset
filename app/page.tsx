@@ -55,23 +55,20 @@ interface HomeFoodItem {
 
 function getSmileLevelForDay(
   totalCalories: number,
-  hasExercise: boolean,
+  hasFood: boolean,
   doneCount: number,
   failedCount: number,
   targetCalories: number,
 ) : SmileLevel {
-  const hasFood = totalCalories > 0;
-
-  if (!hasFood && !hasExercise && doneCount === 0 && failedCount === 0) {
+  if (!hasFood && doneCount === 0 && failedCount === 0) {
     return "neutral";
   }
 
   if (
     hasFood &&
     totalCalories <= targetCalories &&
-    hasExercise &&
     failedCount === 0 &&
-    doneCount >= 1
+    doneCount >= 2
   ) {
     return "very_happy";
   }
@@ -190,27 +187,42 @@ export default function Page() {
   const todayDoDoneCount = Object.values(todayRuleHistory?.doRuleStatuses ?? {}).filter(
     (status) => status === "done",
   ).length;
+  const todayAvoidDoneCount = Object.values(
+    todayRuleHistory?.avoidRuleStatuses ?? {},
+  ).filter((status) => status === "done").length;
+  const todayDoFailedCount = Object.values(todayRuleHistory?.doRuleStatuses ?? {}).filter(
+    (status) => status === "failed",
+  ).length;
   const todayAvoidFailedCount = Object.values(
     todayRuleHistory?.avoidRuleStatuses ?? {},
   ).filter((status) => status === "failed").length;
 
   const totalCalories = todayFoodList.reduce((sum, item) => sum + item.calories, 0);
-  const targetPercent = Math.min(100, Math.round((totalCalories / dailyTargetCalories) * 100));
+  const totalBurnedCalories = todayExerciseLogs.reduce(
+    (sum, item) => sum + item.burnedCalories,
+    0,
+  );
+  const netCalories = totalCalories - totalBurnedCalories;
+  const targetPercent = Math.min(
+    100,
+    Math.max(0, Math.round((netCalories / dailyTargetCalories) * 100)),
+  );
 
   const calorieStatusText =
     totalCalories === 0
       ? "아직 음식 기록이 없어요"
-      : totalCalories <= dailyTargetCalories
+      : netCalories <= dailyTargetCalories
         ? "칼로리 목표는 현재 범위 안이에요"
         : "목표 칼로리를 조금 넘기고 있어요";
 
   const okCount =
     todayDoDoneCount +
-    (totalCalories > 0 && totalCalories <= dailyTargetCalories ? 1 : 0);
+    todayAvoidDoneCount +
+    (totalCalories > 0 && netCalories <= dailyTargetCalories ? 1 : 0);
   const xCount =
+    todayDoFailedCount +
     todayAvoidFailedCount +
-    (totalCalories > dailyTargetCalories ? 1 : 0);
-  const bonusCount = todayExerciseLogs.length ? 1 : 0;
+    (netCalories > dailyTargetCalories ? 1 : 0);
 
   const updateRuleStatus = (
     type: "do" | "avoid",
@@ -245,17 +257,24 @@ export default function Page() {
       const dayExercises = exerciseLogs.filter((item) => item.loggedAt === dateKey);
       const dayRuleHistory = ruleHistory.find((item) => item.date === dateKey) ?? null;
       const totalDayCalories = dayFoods.reduce((sum, item) => sum + item.calories, 0);
-      const dayDoDoneCount = Object.values(dayRuleHistory?.doRuleStatuses ?? {}).filter(
+      const totalDayBurnedCalories = dayExercises.reduce(
+        (sum, item) => sum + item.burnedCalories,
+        0,
+      );
+      const netDayCalories = totalDayCalories - totalDayBurnedCalories;
+      const dayDoStatuses = Object.values(dayRuleHistory?.doRuleStatuses ?? {});
+      const dayAvoidStatuses = Object.values(dayRuleHistory?.avoidRuleStatuses ?? {});
+      const dayDoneCount = [...dayDoStatuses, ...dayAvoidStatuses].filter(
         (status) => status === "done",
       ).length;
-      const dayAvoidFailedCount = Object.values(
-        dayRuleHistory?.avoidRuleStatuses ?? {},
-      ).filter((status) => status === "failed").length;
+      const dayFailedCount = [...dayDoStatuses, ...dayAvoidStatuses].filter(
+        (status) => status === "failed",
+      ).length;
       const hasData =
         dayFoods.length > 0 ||
         dayExercises.length > 0 ||
-        dayDoDoneCount > 0 ||
-        dayAvoidFailedCount > 0;
+        dayDoneCount > 0 ||
+        dayFailedCount > 0;
 
       return {
         key: dateKey,
@@ -263,10 +282,10 @@ export default function Page() {
         dateKey,
         level: hasData
           ? getSmileLevelForDay(
-              totalDayCalories,
-              dayExercises.length > 0,
-              dayDoDoneCount,
-              dayAvoidFailedCount,
+              netDayCalories,
+              dayFoods.length > 0,
+              dayDoneCount,
+              dayFailedCount,
               dailyTargetCalories,
             )
           : null,
@@ -281,27 +300,33 @@ export default function Page() {
   const selectedExercises = exerciseLogs.filter((item) => item.loggedAt === selectedDateKey);
   const selectedRuleHistory = ruleHistory.find((item) => item.date === selectedDateKey) ?? null;
   const selectedCalories = selectedFoods.reduce((sum, item) => sum + item.calories, 0);
-  const selectedDoDoneCount = Object.values(selectedRuleHistory?.doRuleStatuses ?? {}).filter(
+  const selectedBurnedCalories = selectedExercises.reduce(
+    (sum, item) => sum + item.burnedCalories,
+    0,
+  );
+  const selectedNetCalories = selectedCalories - selectedBurnedCalories;
+  const selectedDoStatuses = Object.values(selectedRuleHistory?.doRuleStatuses ?? {});
+  const selectedAvoidStatuses = Object.values(selectedRuleHistory?.avoidRuleStatuses ?? {});
+  const selectedDoneCount = [...selectedDoStatuses, ...selectedAvoidStatuses].filter(
     (status) => status === "done",
   ).length;
-  const selectedAvoidFailedCount = Object.values(
-    selectedRuleHistory?.avoidRuleStatuses ?? {},
-  ).filter((status) => status === "failed").length;
+  const selectedFailedCount = [...selectedDoStatuses, ...selectedAvoidStatuses].filter(
+    (status) => status === "failed",
+  ).length;
   const selectedLevel =
-    selectedFoods.length || selectedExercises.length || selectedDoDoneCount || selectedAvoidFailedCount
+    selectedFoods.length || selectedExercises.length || selectedDoneCount || selectedFailedCount
       ? getSmileLevelForDay(
-          selectedCalories,
-          selectedExercises.length > 0,
-          selectedDoDoneCount,
-          selectedAvoidFailedCount,
+          selectedNetCalories,
+          selectedFoods.length > 0,
+          selectedDoneCount,
+          selectedFailedCount,
           dailyTargetCalories,
         )
       : null;
   const selectedOk =
-    (selectedCalories > 0 && selectedCalories <= dailyTargetCalories ? 1 : 0) + selectedDoDoneCount;
+    (selectedCalories > 0 && selectedNetCalories <= dailyTargetCalories ? 1 : 0) + selectedDoneCount;
   const selectedX =
-    (selectedCalories > dailyTargetCalories ? 1 : 0) + selectedAvoidFailedCount;
-  const selectedBonus = selectedExercises.length ? 1 : 0;
+    (selectedNetCalories > dailyTargetCalories ? 1 : 0) + selectedFailedCount;
 
   const mealSectionTotals = ["아침", "점심", "저녁", "간식"].map((section) => ({
     section,
@@ -458,9 +483,32 @@ export default function Page() {
               {selectedLevel ? ` · ${selectedLevel}` : " · 기록 없음"}
             </p>
             <p className="mt-2 text-sm leading-6 text-muted">
-              OK {selectedOk}개 / X {selectedX}개 / + {selectedBonus}
-              {" · 음식, 운동, 룰 체크 기록을 함께 반영해요."}
+              OK {selectedOk}개 / X {selectedX}개
+              {` · 순섭취 ${selectedNetCalories} kcal`}
             </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => window.location.assign(`/food?date=${selectedDateKey}`)}
+                className="rounded-full border border-line bg-white px-3 py-2 text-xs font-semibold text-ink"
+              >
+                음식 수정
+              </button>
+              <button
+                type="button"
+                onClick={() => window.location.assign(`/exercise?date=${selectedDateKey}`)}
+                className="rounded-full border border-line bg-white px-3 py-2 text-xs font-semibold text-ink"
+              >
+                운동 수정
+              </button>
+              <button
+                type="button"
+                onClick={() => window.location.assign(`/rules?date=${selectedDateKey}`)}
+                className="rounded-full border border-line bg-white px-3 py-2 text-xs font-semibold text-ink"
+              >
+                규칙 수정
+              </button>
+            </div>
           </div>
         </div>
       </Card>
@@ -507,10 +555,9 @@ export default function Page() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <StatCard label="오늘 OK" value={`${okCount}개`} helper="잘 지킨 항목" accent="sage" />
         <StatCard label="오늘 X" value={`${xCount}개`} helper="놓친 항목" accent="rose" />
-        <StatCard label="오늘 +" value={`+${bonusCount}`} helper="운동 보너스" accent="neutral" />
       </div>
 
       <Card className="overflow-hidden rounded-[28px] p-0">
@@ -522,14 +569,14 @@ export default function Page() {
               </p>
               <h2 className="mt-2 text-xl font-semibold text-ink">{calorieStatusText}</h2>
               <p className="mt-2 text-sm leading-6 text-muted">
-                오늘 먹은 양이 목표 범위 안에 있는지 바로 확인할 수 있어요.
+                먹은 칼로리에서 운동으로 소모한 칼로리를 뺀 값이에요.
               </p>
             </div>
             <SmileChip
               level={
                 totalCalories === 0
                   ? "neutral"
-                  : totalCalories <= dailyTargetCalories
+                  : netCalories <= dailyTargetCalories
                     ? "happy"
                     : "sad"
               }
@@ -539,11 +586,14 @@ export default function Page() {
 
           <div className="mt-4 rounded-[22px] bg-white/80 px-4 py-4 ring-1 ring-line/70">
             <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-ink">오늘 섭취량</span>
+              <span className="font-semibold text-ink">오늘 순섭취 칼로리</span>
               <span className="text-muted">
-                {totalCalories} / {dailyTargetCalories} kcal
+                {netCalories} / {dailyTargetCalories} kcal
               </span>
             </div>
+            <p className="mt-2 text-xs text-muted">
+              섭취 {totalCalories} - 운동 {totalBurnedCalories} = 순섭취 {netCalories} kcal
+            </p>
             <div className="mt-3 h-3 rounded-full bg-peach">
               <div
                 className="h-3 rounded-full bg-coral"

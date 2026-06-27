@@ -36,6 +36,7 @@ export default function ExercisePage() {
   const [editingExerciseMinutes, setEditingExerciseMinutes] = useState("");
   const [editingExerciseCalories, setEditingExerciseCalories] = useState("");
   const [editingLoggedAt, setEditingLoggedAt] = useState(getLocalDateKey());
+  const [viewDateKey, setViewDateKey] = useState(getLocalDateKey());
 
   useEffect(() => {
     const loadData = () => {
@@ -44,6 +45,10 @@ export default function ExercisePage() {
     };
 
     loadData();
+    const requestedDate = new URLSearchParams(window.location.search).get("date");
+    if (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
+      setViewDateKey(requestedDate);
+    }
     window.addEventListener(DAILYOK_LOCAL_EVENT, loadData);
 
     return () => {
@@ -68,7 +73,10 @@ export default function ExercisePage() {
   }, [bodyWeightKg, exerciseMinutes, exerciseName, isManualCalories]);
 
   const todayKey = getLocalDateKey();
-  const todayExerciseLogs = exerciseLogs.filter((item) => item.loggedAt === todayKey);
+  const viewDate = new Date(`${viewDateKey}T12:00:00`);
+  const isToday = viewDateKey === todayKey;
+  const dateLabel = isToday ? "오늘" : `${viewDate.getMonth() + 1}월 ${viewDate.getDate()}일`;
+  const todayExerciseLogs = exerciseLogs.filter((item) => item.loggedAt === viewDateKey);
   const totalMinutes = todayExerciseLogs.reduce((sum, item) => sum + item.minutes, 0);
   const totalBurnedCalories = todayExerciseLogs.reduce(
     (sum, item) => sum + item.burnedCalories,
@@ -107,7 +115,7 @@ export default function ExercisePage() {
       name: item.name,
       minutes: item.minutes,
       burnedCalories: item.burnedCalories,
-      loggedAt: todayKey,
+      loggedAt: viewDateKey,
     };
 
     updateExerciseLogs((prev) => [nextItem, ...prev]);
@@ -197,7 +205,7 @@ export default function ExercisePage() {
       name: exerciseName,
       minutes: Number(exerciseMinutes),
       burnedCalories: Number(exerciseCalories || 0),
-      loggedAt: todayKey,
+      loggedAt: viewDateKey,
     };
 
     updateExerciseLogs((prev) => [nextItem, ...prev]);
@@ -208,20 +216,20 @@ export default function ExercisePage() {
     <AppShell
       eyebrow="Exercise bonus"
       title="Exercise"
-      description="오늘 움직인 만큼 가볍게 기록해보세요."
+      description={`${dateLabel} 움직인 만큼 가볍게 기록해보세요.`}
     >
       <Card>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-          Today log
+          {isToday ? "Today log" : "Selected date"}
         </p>
         <h2 className="mt-2 text-xl font-semibold text-ink">{totalBurnedCalories} kcal</h2>
         <p className="mt-1 text-sm text-muted">
-          오늘 총 {totalMinutes}분 움직였고, 운동 기록은 {todayExerciseLogs.length}개예요
+          {dateLabel} 총 {totalMinutes}분 움직였고, 운동 기록은 {todayExerciseLogs.length}개예요
         </p>
       </Card>
 
       <div className="flex flex-wrap gap-2">
-        <Badge>{todayExerciseLogs.length ? "오늘 Bonus 획득" : "아직 운동 기록 전"}</Badge>
+        <Badge>{todayExerciseLogs.length ? `${dateLabel} 운동 기록 완료` : "아직 운동 기록 전"}</Badge>
         <Badge
           style={{ background: "rgb(var(--color-peach) / 0.95)", color: "rgb(var(--color-ink))" }}
         >
@@ -243,11 +251,11 @@ export default function ExercisePage() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-              Today exercise
+              {isToday ? "Today exercise" : "Exercise log"}
             </p>
-            <h2 className="mt-2 text-xl font-semibold text-ink">오늘 운동</h2>
+            <h2 className="mt-2 text-xl font-semibold text-ink">{dateLabel} 운동</h2>
             <p className="mt-1 text-sm text-muted">
-              오늘 한 운동을 바로 추가해보세요.
+              {dateLabel} 한 운동을 바로 추가해보세요.
             </p>
           </div>
         </div>
@@ -260,11 +268,11 @@ export default function ExercisePage() {
 
       <Card>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-          Today list
+          {isToday ? "Today list" : "Exercise list"}
         </p>
-        <h2 className="mt-2 text-xl font-semibold text-ink">오늘의 운동 리스트</h2>
+        <h2 className="mt-2 text-xl font-semibold text-ink">{dateLabel} 운동 리스트</h2>
         <p className="mt-2 text-sm leading-6 text-muted">
-          Food처럼 오늘 추가한 운동이 아래에 쌓여서 보여져요.
+          {dateLabel} 추가한 운동이 아래에 차곡차곡 보여요.
         </p>
         <div className="mt-4 space-y-3">
           {todayExerciseLogs.length === 0 ? (
@@ -464,7 +472,18 @@ export default function ExercisePage() {
             <Input
               id="editingExerciseName"
               value={editingExerciseName}
-              onChange={(event) => setEditingExerciseName(event.target.value)}
+              onChange={(event) => {
+                const nextName = event.target.value;
+                const estimated = estimateCaloriesByExerciseName(
+                  nextName,
+                  Number(bodyWeightKg),
+                  Number(editingExerciseMinutes),
+                );
+                setEditingExerciseName(nextName);
+                if (estimated > 0) {
+                  setEditingExerciseCalories(String(estimated));
+                }
+              }}
             />
           </div>
 
@@ -479,7 +498,23 @@ export default function ExercisePage() {
               id="editingExerciseMinutes"
               type="number"
               value={editingExerciseMinutes}
-              onChange={(event) => setEditingExerciseMinutes(event.target.value)}
+              onChange={(event) => {
+                const nextMinutes = event.target.value;
+                const estimated = estimateCaloriesByExerciseName(
+                  editingExerciseName,
+                  Number(bodyWeightKg),
+                  Number(nextMinutes),
+                );
+                const proportionalCalories =
+                  Number(editingExerciseMinutes) > 0
+                    ? Math.round(
+                        (Number(editingExerciseCalories) * Number(nextMinutes)) /
+                          Number(editingExerciseMinutes),
+                      )
+                    : 0;
+                setEditingExerciseMinutes(nextMinutes);
+                setEditingExerciseCalories(String(estimated || proportionalCalories));
+              }}
             />
           </div>
 
