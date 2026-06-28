@@ -21,6 +21,7 @@ import {
   loadOnboardingProfile,
   loadRuleHistory,
   loadWeightHistory,
+  markDietAppResetPending,
   resetDietAppStorage,
   saveBodyWeightKg,
   saveOnboardingProfile,
@@ -313,6 +314,12 @@ export default function ReportPage() {
 
     setResettingRecords(true);
     cancelPendingDietAppSync();
+    markDietAppResetPending();
+    resetDietAppStorage({ syncServer: false });
+    setBodyWeightKgInput("55");
+    setWeightHistory([]);
+    setSelectedRange(7);
+    setSaveMessage("기록을 모두 초기화했어요.");
 
     try {
       if (status === "authenticated") {
@@ -322,18 +329,12 @@ export default function ReportPage() {
           throw new Error("server reset failed");
         }
       }
-
-      resetDietAppStorage({ syncServer: false });
-      setBodyWeightKgInput("55");
-      setWeightHistory([]);
-      setSelectedRange(7);
-      setSaveMessage("기록을 모두 초기화했어요.");
       window.location.assign("/");
     } catch {
-      setResettingRecords(false);
       window.alert(
-        "서버 기록을 지우지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해주세요.",
+        "기기 기록은 초기화했어요. 서버 기록은 인터넷이 연결되면 다시 삭제할게요.",
       );
+      window.location.assign("/");
     }
   };
 

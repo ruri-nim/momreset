@@ -10,6 +10,7 @@ import type {
 } from "@/types/diet-app";
 
 export const DAILYOK_LOCAL_EVENT = "dailyok:local-changed";
+export const DAILYOK_RESET_PENDING_KEY = "dailyok:reset-pending";
 
 export const DIET_APP_STORAGE_KEYS = {
   foodList: "food-list",
@@ -56,6 +57,10 @@ function readSnapshotFromStorage(): DietAppSnapshot {
 
 function queueServerSync() {
   if (typeof window === "undefined") {
+    return;
+  }
+
+  if (isDietAppResetPending()) {
     return;
   }
 
@@ -235,6 +240,30 @@ export function cancelPendingDietAppSync() {
 
   syncAbortController?.abort();
   syncAbortController = null;
+}
+
+export function isDietAppResetPending() {
+  return (
+    typeof window !== "undefined" &&
+    window.localStorage.getItem(DAILYOK_RESET_PENDING_KEY) === "1"
+  );
+}
+
+export function markDietAppResetPending() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  cancelPendingDietAppSync();
+  window.localStorage.setItem(DAILYOK_RESET_PENDING_KEY, "1");
+}
+
+export function clearDietAppResetPending() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.removeItem(DAILYOK_RESET_PENDING_KEY);
 }
 
 export function resetDietAppStorage(options?: { syncServer?: boolean }) {

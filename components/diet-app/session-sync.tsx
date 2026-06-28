@@ -2,7 +2,11 @@
 
 import { useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { DAILYOK_LOCAL_EVENT, DIET_APP_STORAGE_KEYS } from "@/lib/diet-app-storage";
+import {
+  DAILYOK_LOCAL_EVENT,
+  DIET_APP_STORAGE_KEYS,
+  isDietAppResetPending,
+} from "@/lib/diet-app-storage";
 import type { DietAppSnapshot } from "@/types/diet-app";
 
 function readLocalSnapshot(): DietAppSnapshot {
@@ -118,6 +122,13 @@ export function SessionSync() {
     }
 
     let cancelled = false;
+
+    if (isDietAppResetPending()) {
+      fetch("/api/dailyok/snapshot", { method: "DELETE" }).catch(() => {
+        // Keep the reset marker so deletion can be retried on the next authenticated load.
+      });
+      return;
+    }
 
     fetch("/api/dailyok/snapshot")
       .then(async (response) => {

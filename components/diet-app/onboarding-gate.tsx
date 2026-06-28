@@ -2,12 +2,13 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { getProviders, signIn, useSession } from "next-auth/react";
+import { getProviders, signIn, signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { getLocalDateKey } from "@/lib/diet-app-date";
 import {
+  clearDietAppResetPending,
   loadOnboardingProfile,
   loadWeightHistory,
   saveBodyWeightKg,
@@ -137,6 +138,7 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
         ? [{ ...currentHistory[0], weightKg: currentWeight }, ...currentHistory.slice(1)]
         : [todayWeight, ...currentHistory];
 
+    clearDietAppResetPending();
     saveOnboardingProfile(profile);
     saveBodyWeightKg(currentWeight);
     saveWeightHistory(nextHistory);
@@ -145,11 +147,15 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
     return true;
   };
 
-  const handleGuestStart = () => {
+  const handleGuestStart = async () => {
     const saved = persistOnboarding();
 
     if (!saved) {
       return;
+    }
+
+    if (status === "authenticated") {
+      await signOut({ redirect: false });
     }
 
     window.location.reload();
@@ -159,6 +165,11 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
     const saved = persistOnboarding();
 
     if (!saved) {
+      return;
+    }
+
+    if (status === "authenticated") {
+      window.location.reload();
       return;
     }
 
@@ -545,7 +556,7 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
 
                     <div className="mt-4 grid gap-3">
                       {status === "authenticated" ? (
-                        <Button className="w-full justify-center" onClick={handleGuestStart}>
+                        <Button className="w-full justify-center" onClick={() => void handleSocialStart()}>
                           현재 Google 계정으로 시작하기
                         </Button>
                       ) : availableProviders.includes("google") ? (
@@ -554,15 +565,13 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
                         </Button>
                       ) : null}
 
-                      {status !== "authenticated" ? (
-                        <Button
-                          variant="ghost"
-                          className="w-full justify-center"
-                          onClick={handleGuestStart}
-                        >
-                          Guest로 시작하기
-                        </Button>
-                      ) : null}
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-center"
+                        onClick={() => void handleGuestStart()}
+                      >
+                        Guest로 시작하기
+                      </Button>
                     </div>
                   </div>
                 </div>
