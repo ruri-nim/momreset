@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   description: "A self-guided diet coach built around calories, OK/X habits, and weekly rules.",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/icon",
-    apple: "/apple-icon",
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
   },
   appleWebApp: {
     capable: true,
