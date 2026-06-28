@@ -14,20 +14,32 @@ import {
   getRuleHistoryForDate,
   loadAvoidRules,
   loadDoRules,
+  loadExerciseLogs,
+  loadFoodList,
+  loadRuleHistory,
   saveAvoidRules,
   saveDoRules,
   saveRuleStatusesForDate,
 } from "@/lib/diet-app-storage";
+import {
+  getPersonalizedRuleRecommendations,
+  getRulePerformanceHighlights,
+} from "@/lib/rule-insights";
+import type {
+  DietFoodItem,
+  ExerciseLogItem,
+  RuleHistoryEntry,
+} from "@/types/diet-app";
 import type { RuleItem } from "@/types/diet-app";
 
 const suggestions = [
-  "하루 물 2L 마시기",
-  "점심 후 15분 걷기",
-  "저녁에 단백질 1회 꼭 챙기기",
-  "밤 7시 이후 야식 먹지 않기",
-  "달달한 음료 먹지 않기",
-  "디저트 먹지 않기",
-  "배달음식 먹지 않기",
+  { title: "하루 물 2L 마시기", type: "do" as const },
+  { title: "점심 후 15분 걷기", type: "do" as const },
+  { title: "저녁에 단백질 1회 꼭 챙기기", type: "do" as const },
+  { title: "밤 7시 이후 야식 먹지 않기", type: "avoid" as const },
+  { title: "달달한 음료 먹지 않기", type: "avoid" as const },
+  { title: "디저트 먹지 않기", type: "avoid" as const },
+  { title: "배달음식 먹지 않기", type: "avoid" as const },
 ];
 
 function hasRuleTitle(items: RuleItem[], title: string) {
@@ -57,6 +69,9 @@ export default function RulesPage() {
   const [newRuleTitle, setNewRuleTitle] = useState("");
   const [newRuleType, setNewRuleType] = useState<"do" | "avoid">("do");
   const [isEmbedded, setIsEmbedded] = useState(false);
+  const [foodList, setFoodList] = useState<DietFoodItem[]>([]);
+  const [exerciseLogs, setExerciseLogs] = useState<ExerciseLogItem[]>([]);
+  const [ruleHistory, setRuleHistory] = useState<RuleHistoryEntry[]>([]);
   const isStatusEditor = isEmbedded;
 
   useEffect(() => {
@@ -65,6 +80,9 @@ export default function RulesPage() {
       const savedAvoidRules = loadAvoidRules();
       const todayHistory = getRuleHistoryForDate(viewDateKey);
 
+      setFoodList(loadFoodList());
+      setExerciseLogs(loadExerciseLogs());
+      setRuleHistory(loadRuleHistory());
       setDoRules(
         savedDoRules.map((item) => ({
           ...item,
@@ -161,9 +179,7 @@ export default function RulesPage() {
     setDialogOpen(false);
   };
 
-  const addSuggestion = (title: string) => {
-    const isAvoid = title.includes("먹지 않기") || title.includes("줄이기");
-
+  const addSuggestion = (title: string, type: "do" | "avoid") => {
     if (hasRuleTitle(doRules, title) || hasRuleTitle(avoidRules, title)) {
       return;
     }
@@ -174,7 +190,7 @@ export default function RulesPage() {
       status: "pending",
     };
 
-    if (isAvoid) {
+    if (type === "avoid") {
       const next = [...avoidRules, nextRule];
       setAvoidRules(next);
       saveAvoidRules(next);
@@ -187,6 +203,19 @@ export default function RulesPage() {
     saveDoRules(next);
     saveRuleStatusesForDate(viewDateKey, next, avoidRules);
   };
+
+  const performance = getRulePerformanceHighlights({
+    doRules,
+    avoidRules,
+    history: ruleHistory,
+  });
+  const personalized = getPersonalizedRuleRecommendations({
+    foods: foodList,
+    exerciseLogs,
+    ruleHistory,
+    doRules,
+    avoidRules,
+  });
 
   return (
     <AppShell
@@ -291,6 +320,45 @@ export default function RulesPage() {
 
       {!isStatusEditor ? <Card>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+          My record
+        </p>
+        <h2 className="mt-2 text-xl font-semibold text-ink">나의 규칙 성적</h2>
+        {performance.best && performance.hardest ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-[20px] border border-line/80 bg-[#fff4ad] p-4">
+              <span className="inline-flex rounded-full bg-white/75 px-3 py-1 text-xs font-bold text-ink">
+                제일 잘 지켰어요
+              </span>
+              <p className="mt-3 break-keep text-base font-bold leading-6 text-ink">
+                {performance.best.title}
+              </p>
+              <p className="mt-1 text-sm text-muted">
+                {performance.best.attempts}번 중 {performance.best.successes}번 성공 ·{" "}
+                {performance.best.successRate}%
+              </p>
+            </div>
+            <div className="rounded-[20px] border border-line/80 bg-[#ffd7cf] p-4">
+              <span className="inline-flex rounded-full bg-white/75 px-3 py-1 text-xs font-bold text-ink">
+                제일 어려웠어요
+              </span>
+              <p className="mt-3 break-keep text-base font-bold leading-6 text-ink">
+                {performance.hardest.title}
+              </p>
+              <p className="mt-1 text-sm text-muted">
+                {performance.hardest.attempts}번 중 {performance.hardest.successes}번 성공 ·{" "}
+                {performance.hardest.successRate}%
+              </p>
+            </div>
+          </div>
+        ) : (
+          <p className="mt-3 break-keep text-sm leading-6 text-muted">
+            규칙을 성공 또는 실패로 기록하면 가장 잘 지킨 규칙과 어려웠던 규칙을 알려드릴게요.
+          </p>
+        )}
+      </Card> : null}
+
+      {!isStatusEditor ? <Card>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
           Suggestions
         </p>
         <h2 className="mt-2 text-xl font-semibold text-ink">앱이 추천하는 규칙</h2>
@@ -300,15 +368,59 @@ export default function RulesPage() {
         <div className="mt-4 flex flex-wrap gap-2">
           {suggestions.map((item) => (
             <button
-              key={item}
+              key={item.title}
               type="button"
-              onClick={() => addSuggestion(item)}
+              onClick={() => addSuggestion(item.title, item.type)}
+              disabled={hasRuleTitle(doRules, item.title) || hasRuleTitle(avoidRules, item.title)}
               className="rounded-full border border-line/80 bg-white/75 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-sage/60"
             >
-              {item}
+              {hasRuleTitle(doRules, item.title) || hasRuleTitle(avoidRules, item.title)
+                ? `추가됨 · ${item.title}`
+                : item.title}
             </button>
           ))}
         </div>
+      </Card> : null}
+
+      {!isStatusEditor ? <Card>
+        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+          Just for you
+        </p>
+        <h2 className="mt-2 text-xl font-semibold text-ink">내 기록 맞춤 추천</h2>
+        {personalized.recordedDays < 3 ? (
+          <p className="mt-3 break-keep text-sm leading-6 text-muted">
+            조금만 더 기록하면 내 생활 패턴에 꼭 맞는 규칙을 추천해드릴게요. 최근 7일 중
+            3일 이상 기록하면 시작돼요.
+          </p>
+        ) : personalized.recommendations.length ? (
+          <div className="mt-4 space-y-3">
+            {personalized.recommendations.map((item) => (
+              <div
+                key={item.title}
+                className="flex flex-col gap-3 rounded-[20px] border border-line/80 bg-white/70 p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge>{item.type === "do" ? "해야 할 일" : "피해야 할 일"}</Badge>
+                    <p className="break-keep font-bold text-ink">{item.title}</p>
+                  </div>
+                  <p className="mt-2 break-keep text-sm leading-6 text-muted">{item.reason}</p>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => addSuggestion(item.title, item.type)}
+                  className="w-full sm:w-auto"
+                >
+                  추가
+                </Button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 break-keep text-sm leading-6 text-muted">
+            지금 기록에서는 새로 추가할 규칙이 없어요. 이미 필요한 규칙을 잘 골라두셨어요.
+          </p>
+        )}
       </Card> : null}
 
       <Dialog
