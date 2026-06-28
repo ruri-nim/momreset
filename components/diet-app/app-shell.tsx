@@ -52,14 +52,15 @@ export function AppShell({
             boxShadow: "0 14px 28px rgba(188, 129, 94, 0.14)",
           }}
         >
-          <div className="absolute inset-y-0 left-0 w-[58%] bg-[linear-gradient(90deg,rgba(255,251,231,0.82),rgba(255,251,231,0.42),transparent)]" />
-          <div className="absolute left-4 top-1/2 -translate-y-1/2 sm:left-5">
+          <div className="absolute inset-y-0 left-0 w-[48%] bg-[linear-gradient(90deg,rgba(255,249,218,0.42),rgba(255,249,218,0.12),transparent)]" />
+          <div className="absolute left-[6%] top-1/2 w-[38%] -translate-y-1/2">
             <h1
-              className="whitespace-nowrap rounded-full border border-[#efc9b9]/80 bg-white/80 px-4 py-2 text-[22px] font-black uppercase leading-none text-ink shadow-[3px_4px_0_rgba(113,84,63,0.12)] backdrop-blur-[2px] sm:text-[25px]"
+              className="whitespace-nowrap text-[clamp(25px,7.4vw,34px)] font-black uppercase leading-none text-ink"
               style={{
                 fontFamily:
                   '"Chalkboard SE", "Marker Felt", "Trebuchet MS", "Pretendard", sans-serif',
-                letterSpacing: "-0.035em",
+                letterSpacing: "-0.045em",
+                textShadow: "2px 3px 0 rgba(113, 84, 63, 0.10)",
               }}
             >
               {title}
