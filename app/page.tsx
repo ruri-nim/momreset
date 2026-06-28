@@ -29,11 +29,11 @@ import {
   saveDoRules,
   saveRuleStatusesForDate,
 } from "@/lib/diet-app-storage";
+import { getSmileLevelForDay } from "@/lib/smile-score";
 import type {
   ExerciseLogItem,
   RuleHistoryEntry,
   RuleItem,
-  SmileLevel,
 } from "@/types/diet-app";
 
 const weekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
@@ -52,41 +52,6 @@ interface HomeFoodItem {
   calories: number;
   mealSection?: "아침" | "점심" | "저녁" | "간식";
   loggedAt: string;
-}
-
-function getSmileLevelForDay(
-  totalCalories: number,
-  hasFood: boolean,
-  doneCount: number,
-  failedCount: number,
-  targetCalories: number,
-) : SmileLevel {
-  if (!hasFood && doneCount === 0 && failedCount === 0) {
-    return "neutral";
-  }
-
-  if (
-    hasFood &&
-    totalCalories <= targetCalories &&
-    failedCount === 0 &&
-    doneCount >= 2
-  ) {
-    return "very_happy";
-  }
-
-  if (hasFood && totalCalories <= targetCalories && failedCount === 0) {
-    return "happy";
-  }
-
-  if (failedCount >= 2 || totalCalories > targetCalories * 1.2) {
-    return "very_sad";
-  }
-
-  if (failedCount >= 1 || totalCalories > targetCalories) {
-    return "sad";
-  }
-
-  return "sad";
 }
 
 export default function Page() {

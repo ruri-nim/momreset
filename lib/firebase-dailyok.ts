@@ -3,8 +3,8 @@ import type {
   DietAppSnapshot,
   OnboardingProfile,
   RuleItem,
-  SmileLevel,
 } from "@/types/diet-app";
+import { getSmileLevelForDay } from "@/lib/smile-score";
 import {
   buildWeeklyInsightSummary,
   generateRuleBasedWeeklyFeedback,
@@ -54,41 +54,6 @@ export function normalizeSnapshot(payload: unknown): DietAppSnapshot {
     ruleHistory: Array.isArray(snapshot?.ruleHistory) ? snapshot.ruleHistory : [],
     onboardingProfile: snapshot?.onboardingProfile ?? null,
   };
-}
-
-export function getSmileLevelForDay(
-  totalCalories: number,
-  hasFood: boolean,
-  doneCount: number,
-  failedCount: number,
-  targetCalories: number,
-): SmileLevel {
-  if (!hasFood && doneCount === 0 && failedCount === 0) {
-    return "neutral";
-  }
-
-  if (
-    hasFood &&
-    totalCalories <= targetCalories &&
-    failedCount === 0 &&
-    doneCount >= 2
-  ) {
-    return "very_happy";
-  }
-
-  if (hasFood && totalCalories <= targetCalories && failedCount === 0) {
-    return "happy";
-  }
-
-  if (failedCount >= 2 || totalCalories > targetCalories * 1.2) {
-    return "very_sad";
-  }
-
-  if (failedCount >= 1 || totalCalories > targetCalories) {
-    return "sad";
-  }
-
-  return "sad";
 }
 
 export function getGoalCalories(snapshot: DietAppSnapshot, baseDate = new Date()) {
