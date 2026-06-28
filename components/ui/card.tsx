@@ -12,7 +12,7 @@ export function Card({ className, style, ...props }: HTMLAttributes<HTMLDivEleme
         ...style,
       }}
       className={cn(
-        "kitsch-card rounded-[28px] border border-line bg-white/90 p-5 shadow-soft backdrop-blur",
+        "kitsch-card rounded-[24px] border border-line bg-white/90 p-4 shadow-soft backdrop-blur sm:rounded-[28px] sm:p-5",
         className,
       )}
       {...props}

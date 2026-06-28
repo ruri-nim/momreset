@@ -363,16 +363,16 @@ export default function FoodPage() {
                     {items.map((food) => (
                       <div
                         key={food.id}
-                        className="flex items-center justify-between rounded-[22px] border border-line/80 bg-white/70 px-4 py-3"
+                        className="rounded-[20px] border border-line/80 bg-white/70 px-3.5 py-3 sm:flex sm:items-center sm:justify-between sm:rounded-[22px] sm:px-4"
                       >
-                        <div>
-                          <p className="text-sm font-semibold text-ink">{food.name}</p>
-                          <p className="mt-1 text-xs text-muted">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold leading-5 text-ink">{food.name}</p>
+                          <p className="mt-1 text-xs leading-5 text-muted">
                             {food.note ?? "직접 입력 기록"}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <div className="rounded-full bg-sage/70 px-3 py-1 text-xs font-semibold text-ink">
+                        <div className="mt-3 flex flex-wrap items-center gap-2 sm:ml-3 sm:mt-0 sm:flex-nowrap">
+                          <div className="mr-auto whitespace-nowrap rounded-full bg-sage/70 px-3 py-1 text-xs font-semibold text-ink sm:mr-0">
                             {food.calories} kcal
                           </div>
                           <Button

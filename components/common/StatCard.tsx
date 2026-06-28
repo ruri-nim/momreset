@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -33,10 +32,10 @@ export default function StatCard({
   labelClassName,
 }: StatCardProps) {
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="h-full">
+    <div className="h-full">
       <Card
         className={cn(
-          "flex h-full min-h-[142px] flex-col bg-gradient-to-br px-4 py-4 md:min-h-[148px] md:px-5 md:py-5",
+          "flex h-full min-h-[122px] flex-col bg-gradient-to-br px-3.5 py-3.5 sm:min-h-[142px] sm:px-4 sm:py-4 md:min-h-[148px] md:px-5 md:py-5",
           accentMap[accent],
           className,
         )}
@@ -58,10 +57,10 @@ export default function StatCard({
         >
           {label}
         </p>
-        <div className="mt-3 h-[56px] md:h-[60px]">
+        <div className="mt-2 h-[42px] sm:mt-3 sm:h-[56px] md:h-[60px]">
           <p
             className={cn(
-              "text-[1.5rem] font-semibold leading-[1.08] text-ink md:text-[1.6rem]",
+              "whitespace-nowrap text-[1.32rem] font-semibold leading-[1.08] text-ink sm:text-[1.5rem] md:text-[1.6rem]",
               valueClassName,
             )}
             style={{ letterSpacing: "-0.05em" }}
@@ -70,11 +69,11 @@ export default function StatCard({
           </p>
         </div>
         {helper ? (
-          <p className={cn("mt-2 text-[12.5px] leading-6", helperClassName)} style={{ color: "var(--text-soft)" }}>
+          <p className={cn("mt-1 text-[11.5px] leading-5 sm:mt-2 sm:text-[12.5px] sm:leading-6", helperClassName)} style={{ color: "var(--text-soft)" }}>
             {helper}
           </p>
         ) : null}
       </Card>
-    </motion.div>
+    </div>
   );
 }

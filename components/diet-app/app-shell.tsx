@@ -25,9 +25,9 @@ export function AppShell({
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-[460px] px-4 pb-28 pt-4">
+    <main className="mx-auto min-h-screen w-full max-w-[460px] px-0 pb-24 pt-0 sm:px-4 sm:pb-28 sm:pt-4">
       <div
-        className="relative overflow-hidden rounded-[38px] border px-4 pb-8 pt-4 shadow-soft backdrop-blur"
+        className="relative overflow-hidden rounded-none border-x-0 border-b border-t-0 px-3 pb-6 pt-3 shadow-soft backdrop-blur sm:rounded-[38px] sm:border sm:px-4 sm:pb-8 sm:pt-4"
         style={{
           background: "var(--shell-background)",
           borderColor: "var(--shell-border)",
@@ -42,7 +42,7 @@ export function AppShell({
         <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[radial-gradient(circle_at_top_left,rgba(255,205,96,0.18),transparent_60%)]" />
 
         <header
-          className="relative mb-6 rounded-[30px] border p-5 shadow-soft backdrop-blur"
+          className="relative mb-4 rounded-[24px] border px-5 py-4 shadow-soft backdrop-blur sm:mb-6 sm:rounded-[30px] sm:p-5"
           style={{
             background:
               "linear-gradient(180deg, rgba(255,252,241,0.97) 0%, rgba(255,246,225,0.96) 100%)",
@@ -52,7 +52,7 @@ export function AppShell({
         >
           <div className="kitsch-doodle right-4 top-4 text-[16px]">✨</div>
           <div className="kitsch-doodle left-5 bottom-3 text-[16px] -rotate-[14deg]">🍊</div>
-          <h1 className="kitsch-title max-w-[12ch] text-[34px] text-[#fffaf0] sm:text-[38px]">
+          <h1 className="kitsch-title max-w-[12ch] whitespace-nowrap text-[30px] text-[#fffaf0] sm:text-[38px]">
             {title}
           </h1>
         </header>

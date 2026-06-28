@@ -14,10 +14,11 @@ export function Badge({ className, style, ...props }: HTMLAttributes<HTMLSpanEle
         background: "rgb(var(--color-sage) / 0.9)",
         color: "rgb(var(--color-coral))",
         letterSpacing: "-0.02em",
+        whiteSpace: "nowrap",
         ...style,
       }}
       className={cn(
-        "inline-flex items-center rounded-full bg-peach px-3 py-1 text-xs font-medium text-ink",
+        "inline-flex shrink-0 items-center whitespace-nowrap rounded-full bg-peach px-3 py-1 text-xs font-medium text-ink",
         className,
       )}
       {...props}

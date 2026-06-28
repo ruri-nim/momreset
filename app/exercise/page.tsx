@@ -282,14 +282,14 @@ export default function ExercisePage() {
             todayExerciseLogs.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between rounded-[22px] border border-line/80 bg-white/70 px-4 py-3"
+                className="rounded-[20px] border border-line/80 bg-white/70 px-3.5 py-3 sm:flex sm:items-center sm:justify-between sm:rounded-[22px] sm:px-4"
               >
-                <div>
-                  <p className="text-sm font-semibold text-ink">{item.name}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold leading-5 text-ink">{item.name}</p>
                   <p className="mt-1 text-xs text-muted">{item.minutes}분 수행</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="rounded-full bg-peach px-3 py-1 text-xs font-semibold text-ink">
+                <div className="mt-3 flex flex-wrap items-center gap-2 sm:ml-3 sm:mt-0 sm:flex-nowrap">
+                  <div className="mr-auto whitespace-nowrap rounded-full bg-peach px-3 py-1 text-xs font-semibold text-ink sm:mr-0">
                     {item.burnedCalories} kcal
                   </div>
                   <Button

@@ -47,6 +47,7 @@ export function Button({
     fontWeight: 700,
     transition: "all 0.18s ease",
     letterSpacing: "-0.02em",
+    whiteSpace: "nowrap",
   };
 
   return (
@@ -58,7 +59,7 @@ export function Button({
         ...style,
       }}
       className={cn(
-        "inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-medium transition-colors",
+        "inline-flex shrink-0 items-center justify-center whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors",
         variants[variant],
         className,
       )}

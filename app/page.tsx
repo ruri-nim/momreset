@@ -36,7 +36,7 @@ import type {
   SmileLevel,
 } from "@/types/diet-app";
 
-const weekdayLabels = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+const weekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
 
 const smileStickerMap = {
   very_happy: { emoji: "😎", tint: "bg-[#ffe066]", ring: "ring-[#ffca28]" },
@@ -380,42 +380,42 @@ export default function Page() {
       title="Home"
       description="오늘 기록과 기분을 한눈에 가볍게 확인해보세요."
     >
-      <Card className="overflow-hidden rounded-[30px] p-0">
-        <div className="bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,245,249,0.96))] px-5 py-5">
+      <Card className="overflow-hidden rounded-[24px] p-0 sm:rounded-[30px]">
+        <div className="bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(255,245,249,0.96))] px-3 py-4 sm:px-5 sm:py-5">
           <div className="flex items-start justify-between gap-3">
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted">
                 {formatMonthTitle(currentMonthDate)}
               </p>
-              <h2 className="mt-2 text-[1.8rem] font-semibold text-ink">Smile Calendar</h2>
-              <p className="mt-2 text-sm leading-6 text-muted">
+              <h2 className="mt-1.5 whitespace-nowrap text-[1.45rem] font-semibold text-ink sm:mt-2 sm:text-[1.8rem]">Smile Calendar</h2>
+              <p className="mt-1.5 text-[13px] leading-5 text-muted sm:mt-2 sm:text-sm sm:leading-6">
                 기록이 쌓일수록 한 달 흐름이 스티커처럼 보여요.
               </p>
             </div>
-            <div className="rounded-full bg-white/85 px-3 py-2 text-xs font-semibold text-ink shadow-soft">
+            <div className="hidden shrink-0 whitespace-nowrap rounded-full bg-white/85 px-3 py-2 text-xs font-semibold text-ink shadow-soft sm:block">
               Sticker view
             </div>
           </div>
 
-          <div className="mt-5 rounded-[28px] border border-white/80 bg-[linear-gradient(180deg,#fffef8,#fff)] p-4 shadow-soft">
-            <div className="grid grid-cols-7 gap-2">
+          <div className="mt-4 rounded-[20px] border border-white/80 bg-[linear-gradient(180deg,#fffef8,#fff)] p-2 shadow-soft sm:mt-5 sm:rounded-[28px] sm:p-4">
+            <div className="grid grid-cols-7 gap-1 sm:gap-2">
               {weekdayLabels.map((label) => (
                 <div
                   key={label}
-                  className="text-center text-[11px] font-bold tracking-[0.18em] text-muted"
+                  className="whitespace-nowrap text-center text-[10px] font-bold text-muted sm:text-[11px] sm:tracking-[0.18em]"
                 >
                   {label}
                 </div>
               ))}
             </div>
 
-            <div className="mt-3 grid grid-cols-7 gap-2">
+            <div className="mt-2 grid grid-cols-7 gap-1 sm:mt-3 sm:gap-2">
               {calendarCells.map((cell) => {
                 if (!cell.day) {
                   return (
                     <div
                       key={cell.key}
-                      className="aspect-[0.88] rounded-[18px] bg-white/40"
+                      className="aspect-square rounded-[12px] bg-white/40 sm:aspect-[0.88] sm:rounded-[18px]"
                     />
                   );
                 }
@@ -427,17 +427,21 @@ export default function Page() {
                     key={cell.key}
                     type="button"
                     onClick={() => setSelectedDay(cell.day)}
-                    className="group relative aspect-[0.88] rounded-[20px] border border-[#f1e8ef] bg-white p-2 text-left shadow-[0_8px_22px_rgba(187,167,177,0.12)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_28px_rgba(187,167,177,0.18)]"
+                    className={`group relative aspect-square rounded-[12px] border bg-white p-1 text-left shadow-[0_4px_12px_rgba(187,167,177,0.1)] transition hover:-translate-y-0.5 sm:aspect-[0.88] sm:rounded-[20px] sm:p-2 sm:shadow-[0_8px_22px_rgba(187,167,177,0.12)] ${
+                      selectedDay === cell.day
+                        ? "border-coral ring-2 ring-coral/20"
+                        : "border-[#f1e8ef]"
+                    }`}
                   >
-                    <span className="text-[11px] font-bold text-muted">{cell.day}</span>
+                    <span className="whitespace-nowrap text-[9px] font-bold text-muted sm:text-[11px]">{cell.day}</span>
                     {sticker ? (
                       <span
-                        className={`absolute left-1/2 top-[54%] inline-flex h-10 w-10 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-xl shadow-[0_8px_18px_rgba(0,0,0,0.08)] ring-2 ${sticker.tint} ${sticker.ring} rotate-[-6deg] group-hover:rotate-0`}
+                        className={`absolute left-1/2 top-[57%] inline-flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-[15px] shadow-[0_4px_10px_rgba(0,0,0,0.08)] ring-1 sm:top-[54%] sm:h-10 sm:w-10 sm:text-xl sm:shadow-[0_8px_18px_rgba(0,0,0,0.08)] sm:ring-2 ${sticker.tint} ${sticker.ring} rotate-[-6deg] group-hover:rotate-0`}
                       >
                         {sticker.emoji}
                       </span>
                     ) : (
-                      <span className="absolute bottom-2 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-line/80" />
+                      <span className="absolute bottom-1.5 left-1/2 h-1.5 w-1.5 -translate-x-1/2 rounded-full bg-line/80 sm:bottom-2 sm:h-2 sm:w-2" />
                     )}
                   </button>
                 );
@@ -445,7 +449,7 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="mt-4 flex items-center justify-between gap-3">
+          <div className="mt-3 grid grid-cols-[auto_1fr_auto] items-center gap-2 sm:mt-4 sm:gap-3">
             <button
               type="button"
               onClick={() => {
@@ -454,11 +458,11 @@ export default function Page() {
                 setCurrentMonthDate(new Date(previousMonth.getFullYear(), previousMonth.getMonth(), 1));
                 setSelectedDay(1);
               }}
-              className="rounded-full border border-line bg-white/85 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-white"
+              className="whitespace-nowrap rounded-full border border-line bg-white/85 px-3 py-2 text-xs font-semibold text-ink transition hover:bg-white sm:px-4 sm:text-sm"
             >
               이전 달
             </button>
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+            <p className="truncate text-center text-[10px] font-semibold tracking-[0.08em] text-muted sm:text-xs sm:uppercase sm:tracking-[0.18em]">
               지난 기록 보기
             </p>
             <button
@@ -474,47 +478,47 @@ export default function Page() {
                 setSelectedDay(1);
               }}
               disabled={isCurrentMonth}
-              className="rounded-full border border-line bg-white/85 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45"
+              className="whitespace-nowrap rounded-full border border-line bg-white/85 px-3 py-2 text-xs font-semibold text-ink transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-45 sm:px-4 sm:text-sm"
             >
               다음 달
             </button>
           </div>
 
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Badge style={{ background: "#ffe066", color: "#6b5200" }}>😎 아주 잘한 날</Badge>
-            <Badge style={{ background: "#ffd166", color: "#6a4700" }}>☺️ 잘한 날</Badge>
-            <Badge style={{ background: "#ffb88c", color: "#74411d" }}>🙄 보통인 날</Badge>
-            <Badge style={{ background: "#ff8a80", color: "#7a1f12" }}>☹️ 흔들린 날</Badge>
-            <Badge style={{ background: "#ff5252", color: "#6f0f12" }}>😭 많이 아쉬운 날</Badge>
+          <div className="mt-3 grid grid-cols-5 gap-1 sm:mt-4 sm:flex sm:flex-wrap sm:gap-2">
+            <Badge className="justify-center px-1 text-[10px] sm:px-3 sm:text-xs" style={{ background: "#ffe066", color: "#6b5200" }}>😎 최고</Badge>
+            <Badge className="justify-center px-1 text-[10px] sm:px-3 sm:text-xs" style={{ background: "#ffd166", color: "#6a4700" }}>☺️ 좋아요</Badge>
+            <Badge className="justify-center px-1 text-[10px] sm:px-3 sm:text-xs" style={{ background: "#ffb88c", color: "#74411d" }}>🙄 보통</Badge>
+            <Badge className="justify-center px-1 text-[10px] sm:px-3 sm:text-xs" style={{ background: "#ff8a80", color: "#7a1f12" }}>☹️ 아쉬움</Badge>
+            <Badge className="justify-center px-1 text-[10px] sm:px-3 sm:text-xs" style={{ background: "#ff5252", color: "#6f0f12" }}>😭 속상</Badge>
           </div>
-          <div className="mt-4 rounded-[22px] bg-white/80 px-4 py-4 ring-1 ring-line/70">
-            <p className="text-sm font-semibold text-ink">
+          <div className="mt-3 rounded-[18px] bg-white/80 px-3.5 py-3.5 ring-1 ring-line/70 sm:mt-4 sm:rounded-[22px] sm:px-4 sm:py-4">
+            <p className="text-sm font-semibold leading-5 text-ink">
               {selectedDay}일 기록
               {selectedLevel ? ` · ${selectedLevel}` : " · 기록 없음"}
             </p>
-            <p className="mt-2 text-sm leading-6 text-muted">
+            <p className="mt-1.5 text-[13px] leading-5 text-muted sm:mt-2 sm:text-sm sm:leading-6">
               OK {selectedOk}개 / X {selectedX}개
               {` · 순섭취 ${selectedNetCalories} kcal`}
             </p>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 grid grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:gap-2">
               <button
                 type="button"
                 onClick={() => setEditDialog("food")}
-                className="rounded-full border border-line bg-white px-3 py-2 text-xs font-semibold text-ink"
+                className="whitespace-nowrap rounded-full border border-line bg-white px-2 py-2 text-[11px] font-semibold text-ink sm:px-3 sm:text-xs"
               >
                 음식 수정
               </button>
               <button
                 type="button"
                 onClick={() => setEditDialog("exercise")}
-                className="rounded-full border border-line bg-white px-3 py-2 text-xs font-semibold text-ink"
+                className="whitespace-nowrap rounded-full border border-line bg-white px-2 py-2 text-[11px] font-semibold text-ink sm:px-3 sm:text-xs"
               >
                 운동 수정
               </button>
               <button
                 type="button"
                 onClick={() => setEditDialog("rules")}
-                className="rounded-full border border-line bg-white px-3 py-2 text-xs font-semibold text-ink"
+                className="whitespace-nowrap rounded-full border border-line bg-white px-2 py-2 text-[11px] font-semibold text-ink sm:px-3 sm:text-xs"
               >
                 규칙 수정
               </button>
