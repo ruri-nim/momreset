@@ -42,19 +42,29 @@ export function AppShell({
         <div className="pointer-events-none absolute inset-x-0 top-0 h-36 bg-[radial-gradient(circle_at_top_left,rgba(255,205,96,0.18),transparent_60%)]" />
 
         <header
-          className="relative mb-4 rounded-[24px] border px-5 py-4 shadow-soft backdrop-blur sm:mb-6 sm:rounded-[30px] sm:p-5"
+          className="relative mb-4 min-h-[112px] overflow-hidden rounded-[24px] border shadow-soft sm:mb-6 sm:min-h-[128px] sm:rounded-[30px]"
           style={{
-            background:
-              "linear-gradient(180deg, rgba(255,252,241,0.97) 0%, rgba(255,246,225,0.96) 100%)",
+            backgroundImage: "url('/dailyok-header-character.png')",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            backgroundSize: "cover",
             borderColor: "rgba(245, 197, 176, 0.9)",
             boxShadow: "0 14px 28px rgba(188, 129, 94, 0.14)",
           }}
         >
-          <div className="kitsch-doodle right-4 top-4 text-[16px]">✨</div>
-          <div className="kitsch-doodle left-5 bottom-3 text-[16px] -rotate-[14deg]">🍊</div>
-          <h1 className="kitsch-title max-w-[12ch] whitespace-nowrap text-[30px] text-[#fffaf0] sm:text-[38px]">
-            {title}
-          </h1>
+          <div className="absolute inset-y-0 left-0 w-[58%] bg-[linear-gradient(90deg,rgba(255,251,231,0.82),rgba(255,251,231,0.42),transparent)]" />
+          <div className="absolute left-4 top-1/2 -translate-y-1/2 sm:left-5">
+            <h1
+              className="whitespace-nowrap rounded-full border border-[#efc9b9]/80 bg-white/80 px-4 py-2 text-[22px] font-black uppercase leading-none text-ink shadow-[3px_4px_0_rgba(113,84,63,0.12)] backdrop-blur-[2px] sm:text-[25px]"
+              style={{
+                fontFamily:
+                  '"Chalkboard SE", "Marker Felt", "Trebuchet MS", "Pretendard", sans-serif',
+                letterSpacing: "-0.035em",
+              }}
+            >
+              {title}
+            </h1>
+          </div>
         </header>
 
         <div className="relative flex flex-1 flex-col gap-4">{children}</div>
