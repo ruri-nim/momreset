@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,20 @@ export default function FoodSearchDialog({
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedItem, setSelectedItem] = useState<FoodSearchItem | null>(null);
   const [selectedConsumedGrams, setSelectedConsumedGrams] = useState("");
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    setQuery("");
+    setMealCategory("점심");
+    setResults([]);
+    setLoading(false);
+    setErrorMessage("");
+    setSelectedItem(null);
+    setSelectedConsumedGrams("");
+  }, [open]);
 
   const helperText = useMemo(() => {
     if (!query.trim()) return "한식 위주로 검색해보세요. 예: 미역국, 계란후라이, 소고기죽";
