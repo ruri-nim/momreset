@@ -430,14 +430,19 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
                     <p className="text-sm font-semibold uppercase tracking-[0.22em] text-muted">
                       Rule setup
                     </p>
-                    <h2 className="mt-2 text-2xl font-black text-ink">이번 주 규칙도 골라봐요</h2>
+                    <h2 className="mt-2 text-2xl font-black text-ink">규칙을 골라봐요</h2>
                     <p className="mt-2 text-sm leading-6 text-muted">
                       추천 규칙을 톡 눌러 담거나, 내 방식대로 직접 적어도 돼요.
                     </p>
                   </div>
 
                   <div className="rounded-[24px] border border-line/80 bg-white/75 px-4 py-4">
-                    <p className="text-sm font-semibold text-ink">해야 할 일 추천</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-ink">해야 할 일 추천</p>
+                      <span className="whitespace-nowrap text-xs font-semibold text-muted">
+                        {SUGGESTED_DO_RULES.length}개
+                      </span>
+                    </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {SUGGESTED_DO_RULES.map((rule) => (
                         <ChoiceChip
@@ -486,7 +491,12 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
                   </div>
 
                   <div className="rounded-[24px] border border-line/80 bg-white/75 px-4 py-4">
-                    <p className="text-sm font-semibold text-ink">피해야 할 일 추천</p>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-ink">피해야 할 일 추천</p>
+                      <span className="whitespace-nowrap text-xs font-semibold text-muted">
+                        {SUGGESTED_AVOID_RULES.length}개
+                      </span>
+                    </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {SUGGESTED_AVOID_RULES.map((rule) => (
                         <ChoiceChip
