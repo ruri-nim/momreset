@@ -527,6 +527,55 @@ export default function Page() {
         </div>
       </Card>
 
+      <div className="grid grid-cols-2 gap-3">
+        <StatCard label="오늘 OK" value={`${okCount}개`} helper="잘 지킨 항목" accent="sage" />
+        <StatCard label="오늘 X" value={`${xCount}개`} helper="놓친 항목" accent="rose" />
+      </div>
+
+      <Card className="overflow-hidden rounded-[28px] p-0">
+        <div className="bg-[linear-gradient(135deg,rgba(226,244,232,0.95),rgba(255,255,255,0.98))] px-5 py-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
+                Calorie guide
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-ink">{calorieStatusText}</h2>
+              <p className="mt-2 text-sm leading-6 text-muted">
+                먹은 칼로리에서 운동으로 소모한 칼로리를 뺀 값이에요.
+              </p>
+            </div>
+            <SmileChip
+              level={
+                totalCalories === 0
+                  ? "neutral"
+                  : netCalories <= dailyTargetCalories
+                    ? "happy"
+                    : "sad"
+              }
+              compact
+            />
+          </div>
+
+          <div className="mt-4 rounded-[22px] bg-white/80 px-4 py-4 ring-1 ring-line/70">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-semibold text-ink">오늘 순섭취 칼로리</span>
+              <span className="whitespace-nowrap text-muted">
+                {netCalories} / {dailyTargetCalories} kcal
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              섭취 {totalCalories} - 운동 {totalBurnedCalories} = 순섭취 {netCalories} kcal
+            </p>
+            <div className="mt-3 h-3 rounded-full bg-peach">
+              <div
+                className="h-3 rounded-full bg-coral"
+                style={{ width: `${targetPercent}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </Card>
+
       <Card>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
           Avoid first
@@ -566,55 +615,6 @@ export default function Page() {
               showPendingAction={false}
             />
           ))}
-        </div>
-      </Card>
-
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard label="오늘 OK" value={`${okCount}개`} helper="잘 지킨 항목" accent="sage" />
-        <StatCard label="오늘 X" value={`${xCount}개`} helper="놓친 항목" accent="rose" />
-      </div>
-
-      <Card className="overflow-hidden rounded-[28px] p-0">
-        <div className="bg-[linear-gradient(135deg,rgba(226,244,232,0.95),rgba(255,255,255,0.98))] px-5 py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
-                Calorie guide
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-ink">{calorieStatusText}</h2>
-              <p className="mt-2 text-sm leading-6 text-muted">
-                먹은 칼로리에서 운동으로 소모한 칼로리를 뺀 값이에요.
-              </p>
-            </div>
-            <SmileChip
-              level={
-                totalCalories === 0
-                  ? "neutral"
-                  : netCalories <= dailyTargetCalories
-                    ? "happy"
-                    : "sad"
-              }
-              compact
-            />
-          </div>
-
-          <div className="mt-4 rounded-[22px] bg-white/80 px-4 py-4 ring-1 ring-line/70">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-ink">오늘 순섭취 칼로리</span>
-              <span className="text-muted">
-                {netCalories} / {dailyTargetCalories} kcal
-              </span>
-            </div>
-            <p className="mt-2 text-xs text-muted">
-              섭취 {totalCalories} - 운동 {totalBurnedCalories} = 순섭취 {netCalories} kcal
-            </p>
-            <div className="mt-3 h-3 rounded-full bg-peach">
-              <div
-                className="h-3 rounded-full bg-coral"
-                style={{ width: `${targetPercent}%` }}
-              />
-            </div>
-          </div>
         </div>
       </Card>
 

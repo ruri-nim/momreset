@@ -57,6 +57,7 @@ export default function RulesPage() {
   const [newRuleTitle, setNewRuleTitle] = useState("");
   const [newRuleType, setNewRuleType] = useState<"do" | "avoid">("do");
   const [isEmbedded, setIsEmbedded] = useState(false);
+  const isStatusEditor = isEmbedded;
 
   useEffect(() => {
     const loadData = () => {
@@ -191,11 +192,15 @@ export default function RulesPage() {
     <AppShell
       eyebrow="Weekly rules"
       title="Rules"
-      description={`${dateLabel} 규칙의 성공과 실패를 기록해보세요.`}
+      description={
+        isStatusEditor
+          ? `${dateLabel} 규칙의 성공과 실패를 기록해보세요.`
+          : "이번 주 규칙을 확인하고 추가하거나 삭제해보세요."
+      }
       embedded={isEmbedded}
     >
       <div className="flex flex-wrap gap-2">
-        {!isToday ? <Badge>{dateLabel} 기록 수정 중</Badge> : null}
+        {isStatusEditor ? <Badge>{dateLabel} 기록 수정 중</Badge> : null}
         <Badge>해야 할 일 {doRules.length}개</Badge>
         <Badge
           style={{ background: "rgb(var(--color-peach) / 0.95)", color: "rgb(var(--color-ink))" }}
@@ -204,7 +209,7 @@ export default function RulesPage() {
         </Badge>
       </div>
 
-      <Card>
+      {!isStatusEditor ? <Card>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
           This week
         </p>
@@ -212,7 +217,7 @@ export default function RulesPage() {
         <p className="mt-2 text-sm leading-6 text-muted">
           너무 많지 않게, 내가 지킬 수 있는 기준으로 정하면 좋아요.
         </p>
-      </Card>
+      </Card> : null}
 
       <Card>
         <div className="flex items-center justify-between gap-3">
@@ -222,7 +227,7 @@ export default function RulesPage() {
             </p>
             <h2 className="mt-2 text-xl font-semibold text-ink">해야 할 일</h2>
           </div>
-          {isToday ? (
+          {!isStatusEditor ? (
             <Button variant="secondary" onClick={() => { setNewRuleType("do"); setDialogOpen(true); }}>
               항목 추가
             </Button>
@@ -234,8 +239,13 @@ export default function RulesPage() {
               key={item.id}
               item={item}
               tone="do"
-              onChangeStatus={(id, status) => updateRuleStatus("do", id, status)}
-              onDelete={isToday ? (id) => deleteRule("do", id) : undefined}
+              onChangeStatus={
+                isStatusEditor
+                  ? (id, status) => updateRuleStatus("do", id, status)
+                  : undefined
+              }
+              onDelete={!isStatusEditor ? (id) => deleteRule("do", id) : undefined}
+              showStatus={isStatusEditor}
             />
           ))}
         </div>
@@ -249,7 +259,7 @@ export default function RulesPage() {
             </p>
             <h2 className="mt-2 text-xl font-semibold text-ink">피해야 할 일</h2>
           </div>
-          {isToday ? (
+          {!isStatusEditor ? (
             <Button
               variant="secondary"
               onClick={() => {
@@ -267,14 +277,19 @@ export default function RulesPage() {
               key={item.id}
               item={item}
               tone="avoid"
-              onChangeStatus={(id, status) => updateRuleStatus("avoid", id, status)}
-              onDelete={isToday ? (id) => deleteRule("avoid", id) : undefined}
+              onChangeStatus={
+                isStatusEditor
+                  ? (id, status) => updateRuleStatus("avoid", id, status)
+                  : undefined
+              }
+              onDelete={!isStatusEditor ? (id) => deleteRule("avoid", id) : undefined}
+              showStatus={isStatusEditor}
             />
           ))}
         </div>
       </Card>
 
-      {isToday ? <Card>
+      {!isStatusEditor ? <Card>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">
           Suggestions
         </p>
