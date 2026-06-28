@@ -66,6 +66,7 @@ export default function FoodPage() {
   const [editingLoggedAt, setEditingLoggedAt] = useState(getLocalDateKey());
   const [dailyTargetCalories, setDailyTargetCalories] = useState(DEFAULT_DAILY_TARGET_CALORIES);
   const [viewDateKey, setViewDateKey] = useState(getLocalDateKey());
+  const [isEmbedded, setIsEmbedded] = useState(false);
 
   useEffect(() => {
     const loadData = () => {
@@ -77,6 +78,7 @@ export default function FoodPage() {
 
     loadData();
     const requestedDate = new URLSearchParams(window.location.search).get("date");
+    setIsEmbedded(new URLSearchParams(window.location.search).get("embed") === "1");
     if (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
       setViewDateKey(requestedDate);
     }
@@ -295,6 +297,7 @@ export default function FoodPage() {
       eyebrow="Food log"
       title="Food"
       description={`${dateLabel} 먹은 음식과 칼로리를 편하게 기록해보세요.`}
+      embedded={isEmbedded}
     >
       <Card>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">

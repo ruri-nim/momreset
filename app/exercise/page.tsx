@@ -37,6 +37,7 @@ export default function ExercisePage() {
   const [editingExerciseCalories, setEditingExerciseCalories] = useState("");
   const [editingLoggedAt, setEditingLoggedAt] = useState(getLocalDateKey());
   const [viewDateKey, setViewDateKey] = useState(getLocalDateKey());
+  const [isEmbedded, setIsEmbedded] = useState(false);
 
   useEffect(() => {
     const loadData = () => {
@@ -46,6 +47,7 @@ export default function ExercisePage() {
 
     loadData();
     const requestedDate = new URLSearchParams(window.location.search).get("date");
+    setIsEmbedded(new URLSearchParams(window.location.search).get("embed") === "1");
     if (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
       setViewDateKey(requestedDate);
     }
@@ -215,6 +217,7 @@ export default function ExercisePage() {
       eyebrow="Exercise bonus"
       title="Exercise"
       description={`${dateLabel} 움직인 만큼 가볍게 기록해보세요.`}
+      embedded={isEmbedded}
     >
       <Card>
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-muted">

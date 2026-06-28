@@ -56,6 +56,7 @@ export default function RulesPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newRuleTitle, setNewRuleTitle] = useState("");
   const [newRuleType, setNewRuleType] = useState<"do" | "avoid">("do");
+  const [isEmbedded, setIsEmbedded] = useState(false);
 
   useEffect(() => {
     const loadData = () => {
@@ -79,6 +80,7 @@ export default function RulesPage() {
 
     loadData();
     const requestedDate = new URLSearchParams(window.location.search).get("date");
+    setIsEmbedded(new URLSearchParams(window.location.search).get("embed") === "1");
     if (requestedDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
       setViewDateKey(requestedDate);
     }
@@ -190,6 +192,7 @@ export default function RulesPage() {
       eyebrow="Weekly rules"
       title="Rules"
       description={`${dateLabel} 규칙의 성공과 실패를 기록해보세요.`}
+      embedded={isEmbedded}
     >
       <div className="flex flex-wrap gap-2">
         {!isToday ? <Badge>{dateLabel} 기록 수정 중</Badge> : null}

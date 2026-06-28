@@ -7,6 +7,7 @@ import { CheckRow } from "@/components/diet-app/check-row";
 import { SmileChip } from "@/components/diet-app/smile-chip";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
 import { calculateDailyTargetCalories, DEFAULT_DAILY_TARGET_CALORIES } from "@/lib/diet-app-calorie-target";
 import {
   formatMonthTitle,
@@ -98,6 +99,7 @@ export default function Page() {
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLogItem[]>([]);
   const [ruleHistory, setRuleHistory] = useState<RuleHistoryEntry[]>([]);
   const [dailyTargetCalories, setDailyTargetCalories] = useState(DEFAULT_DAILY_TARGET_CALORIES);
+  const [editDialog, setEditDialog] = useState<"food" | "exercise" | "rules" | null>(null);
   const [currentMonthDate, setCurrentMonthDate] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1),
   );
@@ -327,6 +329,14 @@ export default function Page() {
     (selectedCalories > 0 && selectedNetCalories <= dailyTargetCalories ? 1 : 0) + selectedDoneCount;
   const selectedX =
     (selectedNetCalories > dailyTargetCalories ? 1 : 0) + selectedFailedCount;
+  const selectedDateLabel = `${month + 1}월 ${selectedDay}일`;
+  const editDialogLabel =
+    editDialog === "food" ? "음식" : editDialog === "exercise" ? "운동" : "규칙";
+
+  const closeEditDialog = () => {
+    setEditDialog(null);
+    window.dispatchEvent(new Event("storage"));
+  };
 
   const mealSectionTotals = ["아침", "점심", "저녁", "간식"].map((section) => ({
     section,
@@ -489,21 +499,21 @@ export default function Page() {
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => window.location.assign(`/food?date=${selectedDateKey}`)}
+                onClick={() => setEditDialog("food")}
                 className="rounded-full border border-line bg-white px-3 py-2 text-xs font-semibold text-ink"
               >
                 음식 수정
               </button>
               <button
                 type="button"
-                onClick={() => window.location.assign(`/exercise?date=${selectedDateKey}`)}
+                onClick={() => setEditDialog("exercise")}
                 className="rounded-full border border-line bg-white px-3 py-2 text-xs font-semibold text-ink"
               >
                 운동 수정
               </button>
               <button
                 type="button"
-                onClick={() => window.location.assign(`/rules?date=${selectedDateKey}`)}
+                onClick={() => setEditDialog("rules")}
                 className="rounded-full border border-line bg-white px-3 py-2 text-xs font-semibold text-ink"
               >
                 규칙 수정
@@ -617,6 +627,25 @@ export default function Page() {
           <p className="mt-2 text-sm text-ink">{nextActionText}</p>
         </div>
       </Card>
+
+      <Dialog
+        open={Boolean(editDialog)}
+        onClose={closeEditDialog}
+        title={`${selectedDateLabel} ${editDialogLabel} 수정`}
+        description={`${selectedDateLabel}에 남긴 ${editDialogLabel} 기록을 확인하고 바로 고칠 수 있어요.`}
+        className="max-w-[720px]"
+        panelStyle={{ maxWidth: 720 }}
+        bodyClassName="overflow-hidden"
+      >
+        {editDialog ? (
+          <iframe
+            key={`${editDialog}-${selectedDateKey}`}
+            title={`${selectedDateLabel} ${editDialogLabel} 수정`}
+            src={`/${editDialog}?date=${selectedDateKey}&embed=1`}
+            className="h-[65vh] w-full rounded-[22px] border-0 bg-transparent"
+          />
+        ) : null}
+      </Dialog>
     </AppShell>
   );
 }

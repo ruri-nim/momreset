@@ -6,6 +6,7 @@ interface AppShellProps {
   eyebrow: string;
   title: string;
   description: string;
+  embedded?: boolean;
 }
 
 export function AppShell({
@@ -13,7 +14,16 @@ export function AppShell({
   eyebrow,
   title,
   description,
+  embedded = false,
 }: AppShellProps) {
+  if (embedded) {
+    return (
+      <main className="w-full bg-transparent px-1 pb-6">
+        <div className="flex flex-col gap-4">{children}</div>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto min-h-screen w-full max-w-[460px] px-4 pb-28 pt-4">
       <div

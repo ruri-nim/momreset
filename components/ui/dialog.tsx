@@ -66,6 +66,7 @@ export function Dialog({
             {description ? <p className="mt-1 text-sm text-muted">{description}</p> : null}
           </div>
           <Button
+            aria-label="닫기"
             variant="ghost"
             className="h-10 w-10 rounded-full p-0"
             onClick={onClose}
