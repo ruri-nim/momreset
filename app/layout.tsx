@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { DailyRuleFinalizer } from "@/components/diet-app/daily-rule-finalizer";
 import { OnboardingGate } from "@/components/diet-app/onboarding-gate";
 import { SessionSync } from "@/components/diet-app/session-sync";
 import { PwaRegister } from "@/components/pwa/pwa-register";
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <AuthProvider>
           <PwaRegister />
           <SessionSync />
+          <DailyRuleFinalizer />
           <OnboardingGate>{children}</OnboardingGate>
         </AuthProvider>
       </body>

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { getLocalDateKey } from "@/lib/diet-app-date";
 import {
   clearDietAppResetPending,
+  initializeRuleFinalization,
   loadOnboardingProfile,
   loadWeightHistory,
   saveBodyWeightKg,
@@ -131,6 +132,7 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
         : [todayWeight, ...currentHistory];
 
     clearDietAppResetPending();
+    initializeRuleFinalization(todayKey);
     saveOnboardingProfile(profile);
     saveBodyWeightKg(currentWeight);
     saveWeightHistory(nextHistory);

@@ -21,6 +21,7 @@ export const DIET_APP_STORAGE_KEYS = {
   weightHistory: "diet-app:weight-history",
   ruleHistory: "diet-app:rule-history",
   onboardingProfile: "diet-app:onboarding-profile",
+  ruleFinalizedThrough: "diet-app:rule-finalized-through",
 } as const;
 
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
@@ -145,6 +146,12 @@ export function loadDoRules() {
 }
 
 export function saveDoRules(items: RuleItem[]) {
+  const hadAnyRules = loadDoRules().length > 0 || loadAvoidRules().length > 0;
+
+  if (!hadAnyRules && items.length > 0) {
+    initializeRuleFinalization();
+  }
+
   writeStorage(DIET_APP_STORAGE_KEYS.doRules, items);
 }
 
@@ -153,6 +160,12 @@ export function loadAvoidRules() {
 }
 
 export function saveAvoidRules(items: RuleItem[]) {
+  const hadAnyRules = loadDoRules().length > 0 || loadAvoidRules().length > 0;
+
+  if (!hadAnyRules && items.length > 0) {
+    initializeRuleFinalization();
+  }
+
   writeStorage(DIET_APP_STORAGE_KEYS.avoidRules, items);
 }
 
@@ -230,6 +243,94 @@ export function loadOnboardingProfile() {
 
 export function saveOnboardingProfile(profile: OnboardingProfile) {
   writeStorage(DIET_APP_STORAGE_KEYS.onboardingProfile, profile);
+}
+
+export function initializeRuleFinalization(date = getLocalDateKey()) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(DIET_APP_STORAGE_KEYS.ruleFinalizedThrough, date);
+}
+
+function getNextDateKey(dateKey: string) {
+  const date = new Date(`${dateKey}T12:00:00`);
+  date.setDate(date.getDate() + 1);
+  return getLocalDateKey(date);
+}
+
+export function finalizeUnrecordedRuleDays(baseDate = new Date()) {
+  if (typeof window === "undefined" || !loadOnboardingProfile()) {
+    return;
+  }
+
+  const doRules = loadDoRules();
+  const avoidRules = loadAvoidRules();
+
+  if (doRules.length === 0 && avoidRules.length === 0) {
+    return;
+  }
+
+  const yesterday = new Date(baseDate);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayKey = getLocalDateKey(yesterday);
+  const finalizedThrough = readStorage<string | null>(
+    DIET_APP_STORAGE_KEYS.ruleFinalizedThrough,
+    null,
+  );
+
+  if (finalizedThrough && finalizedThrough >= yesterdayKey) {
+    return;
+  }
+
+  const earliestRecentDate = new Date(yesterday);
+  earliestRecentDate.setDate(earliestRecentDate.getDate() - 89);
+  const earliestRecentDateKey = getLocalDateKey(earliestRecentDate);
+  const firstUnfinalizedDateKey = finalizedThrough
+    ? getNextDateKey(finalizedThrough)
+    : yesterdayKey;
+  const firstDateKey =
+    firstUnfinalizedDateKey < earliestRecentDateKey
+      ? earliestRecentDateKey
+      : firstUnfinalizedDateKey;
+  const datesToFinalize: string[] = [];
+  let cursor = firstDateKey;
+
+  while (cursor <= yesterdayKey) {
+    datesToFinalize.push(cursor);
+    cursor = getNextDateKey(cursor);
+  }
+
+  const history = loadRuleHistory();
+  const historyByDate = new Map(history.map((entry) => [entry.date, entry]));
+
+  datesToFinalize.forEach((date) => {
+    const existing = historyByDate.get(date);
+
+    historyByDate.set(date, {
+      date,
+      doRuleStatuses: Object.fromEntries(
+        doRules.map((rule) => [
+          rule.id,
+          existing?.doRuleStatuses[rule.id] === "done" ? "done" : "failed",
+        ]),
+      ),
+      avoidRuleStatuses: Object.fromEntries(
+        avoidRules.map((rule) => [
+          rule.id,
+          existing?.avoidRuleStatuses[rule.id] === "done" ? "done" : "failed",
+        ]),
+      ),
+    });
+  });
+
+  window.localStorage.setItem(
+    DIET_APP_STORAGE_KEYS.ruleFinalizedThrough,
+    yesterdayKey,
+  );
+  saveRuleHistory(
+    [...historyByDate.values()].sort((a, b) => (a.date < b.date ? 1 : -1)),
+  );
 }
 
 export function cancelPendingDietAppSync() {

@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import {
   DAILYOK_LOCAL_EVENT,
   DIET_APP_STORAGE_KEYS,
+  finalizeUnrecordedRuleDays,
   isDietAppResetPending,
 } from "@/lib/diet-app-storage";
 import type { DietAppSnapshot } from "@/types/diet-app";
@@ -151,6 +152,7 @@ export function SessionSync() {
             : payload.snapshot;
 
           writeSnapshotToLocal(nextSnapshot);
+          finalizeUnrecordedRuleDays();
 
           if (localHasData) {
             await fetch("/api/dailyok/snapshot", {
