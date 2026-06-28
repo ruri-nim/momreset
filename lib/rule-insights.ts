@@ -152,7 +152,7 @@ export function getPersonalizedRuleRecommendations(params: {
 
   if (exerciseDays < 2) {
     candidates.push({
-      title: "점심 후 15분 걷기",
+      title: "하루 20분 이상 움직이기",
       type: "do",
       reason: `최근 7일 운동 기록이 ${exerciseDays}일이라, 짧게 시작하기 좋은 규칙이에요.`,
     });
@@ -180,16 +180,16 @@ export function getPersonalizedRuleRecommendations(params: {
   }
   if (alcoholCount >= 1) {
     candidates.push({
-      title: "이번 주 술 마시지 않기",
+      title: "술 마시지 않기",
       type: "avoid",
       reason: "최근 식단에 술이 기록되어 이번 주만 가볍게 쉬어보는 규칙이에요.",
     });
   }
   if (snackDays >= 3) {
     candidates.push({
-      title: "간식은 하루 1번만 먹기",
+      title: "저녁 식사 후 야식 먹지 않기",
       type: "avoid",
-      reason: `최근 7일 중 ${snackDays}일에 간식 기록이 있어 횟수부터 조절해보면 좋아요.`,
+      reason: `최근 7일 중 ${snackDays}일에 간식 기록이 있어 저녁 이후부터 조절해보면 좋아요.`,
     });
   }
 

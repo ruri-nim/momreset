@@ -17,6 +17,10 @@ import {
   saveOnboardingProfile,
   saveWeightHistory,
 } from "@/lib/diet-app-storage";
+import {
+  SUGGESTED_AVOID_RULES,
+  SUGGESTED_DO_RULES,
+} from "@/lib/rule-suggestions";
 import type { OnboardingProfile, RuleItem, WeightLogItem } from "@/types/diet-app";
 
 const challengeOptions: OnboardingProfile["challenge"][] = [
@@ -30,18 +34,6 @@ const challengeOptions: OnboardingProfile["challenge"][] = [
 
 const paceOptions: OnboardingProfile["pace"][] = ["가볍게", "꾸준하게", "집중해서"];
 const coachToneOptions: OnboardingProfile["coachTone"][] = ["다정하게", "솔직하게", "발랄하게"];
-const suggestedDoRules = [
-  "점심 후 15분 걷기",
-  "하루 물 2L 마시기",
-  "저녁에 단백질 1회 꼭 챙기기",
-];
-const suggestedAvoidRules = [
-  "밤 7시 이후 야식 먹지 않기",
-  "달달한 음료 먹지 않기",
-  "디저트 먹지 않기",
-  "배달음식 먹지 않기",
-];
-
 function ChoiceChip({
   selected,
   label,
@@ -447,7 +439,7 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
                   <div className="rounded-[24px] border border-line/80 bg-white/75 px-4 py-4">
                     <p className="text-sm font-semibold text-ink">해야 할 일 추천</p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {suggestedDoRules.map((rule) => (
+                      {SUGGESTED_DO_RULES.map((rule) => (
                         <ChoiceChip
                           key={rule}
                           label={rule}
@@ -496,7 +488,7 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
                   <div className="rounded-[24px] border border-line/80 bg-white/75 px-4 py-4">
                     <p className="text-sm font-semibold text-ink">피해야 할 일 추천</p>
                     <div className="mt-3 flex flex-wrap gap-2">
-                      {suggestedAvoidRules.map((rule) => (
+                      {SUGGESTED_AVOID_RULES.map((rule) => (
                         <ChoiceChip
                           key={rule}
                           label={rule}

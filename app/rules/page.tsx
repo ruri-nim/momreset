@@ -25,22 +25,13 @@ import {
   getPersonalizedRuleRecommendations,
   getRulePerformanceHighlights,
 } from "@/lib/rule-insights";
+import { RULE_SUGGESTIONS } from "@/lib/rule-suggestions";
 import type {
   DietFoodItem,
   ExerciseLogItem,
   RuleHistoryEntry,
 } from "@/types/diet-app";
 import type { RuleItem } from "@/types/diet-app";
-
-const suggestions = [
-  { title: "하루 물 2L 마시기", type: "do" as const },
-  { title: "점심 후 15분 걷기", type: "do" as const },
-  { title: "저녁에 단백질 1회 꼭 챙기기", type: "do" as const },
-  { title: "밤 7시 이후 야식 먹지 않기", type: "avoid" as const },
-  { title: "달달한 음료 먹지 않기", type: "avoid" as const },
-  { title: "디저트 먹지 않기", type: "avoid" as const },
-  { title: "배달음식 먹지 않기", type: "avoid" as const },
-];
 
 function hasRuleTitle(items: RuleItem[], title: string) {
   return items.some((item) => item.title === title);
@@ -216,7 +207,7 @@ export default function RulesPage() {
     doRules,
     avoidRules,
   });
-  const availableSuggestions = suggestions.filter(
+  const availableSuggestions = RULE_SUGGESTIONS.filter(
     (item) => !hasRuleTitle(doRules, item.title) && !hasRuleTitle(avoidRules, item.title),
   );
 
