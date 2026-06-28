@@ -216,6 +216,9 @@ export default function RulesPage() {
     doRules,
     avoidRules,
   });
+  const availableSuggestions = suggestions.filter(
+    (item) => !hasRuleTitle(doRules, item.title) && !hasRuleTitle(avoidRules, item.title),
+  );
 
   return (
     <AppShell
@@ -365,21 +368,24 @@ export default function RulesPage() {
         <p className="mt-2 text-sm leading-6 text-muted">
           마음에 드는 규칙만 골라서 바로 추가해보세요.
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {suggestions.map((item) => (
-            <button
-              key={item.title}
-              type="button"
-              onClick={() => addSuggestion(item.title, item.type)}
-              disabled={hasRuleTitle(doRules, item.title) || hasRuleTitle(avoidRules, item.title)}
-              className="rounded-full border border-line/80 bg-white/75 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-sage/60"
-            >
-              {hasRuleTitle(doRules, item.title) || hasRuleTitle(avoidRules, item.title)
-                ? `추가됨 · ${item.title}`
-                : item.title}
-            </button>
-          ))}
-        </div>
+        {availableSuggestions.length ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {availableSuggestions.map((item) => (
+              <button
+                key={item.title}
+                type="button"
+                onClick={() => addSuggestion(item.title, item.type)}
+                className="rounded-full border border-line/80 bg-white/75 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-sage/60"
+              >
+                {item.title}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 break-keep text-sm leading-6 text-muted">
+            추천 규칙을 모두 내 목록에 추가했어요.
+          </p>
+        )}
       </Card> : null}
 
       {!isStatusEditor ? <Card>
