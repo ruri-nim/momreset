@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { calculateDailyTargetCalories } from "@/lib/diet-app-calorie-target";
 import { formatDateLabel, isDateWithinLastDays } from "@/lib/diet-app-date";
 import {
+  cancelPendingDietAppSync,
   DAILYOK_LOCAL_EVENT,
   loadAvoidRules,
   loadBodyWeightKg,
@@ -112,6 +113,7 @@ export default function ReportPage() {
   const [weeklyFeedbackSource, setWeeklyFeedbackSource] = useState<"ai" | "fallback">("fallback");
   const [weeklyFeedbackLoading, setWeeklyFeedbackLoading] = useState(true);
   const [dataVersion, setDataVersion] = useState(0);
+  const [resettingRecords, setResettingRecords] = useState(false);
 
   useEffect(() => {
     const loadData = () => {
@@ -300,7 +302,7 @@ export default function ReportPage() {
     setIsProfileModalOpen(false);
   };
 
-  const handleResetRecords = () => {
+  const handleResetRecords = async () => {
     const shouldReset = window.confirm(
       "저장된 음식, 운동, 규칙, 몸무게 기록을 모두 초기화할까요?",
     );
@@ -309,12 +311,30 @@ export default function ReportPage() {
       return;
     }
 
-    resetDietAppStorage();
-    setBodyWeightKgInput("55");
-    setWeightHistory([]);
-    setSelectedRange(7);
-    setSaveMessage("기록을 모두 초기화했어요.");
-    window.location.href = "/";
+    setResettingRecords(true);
+    cancelPendingDietAppSync();
+
+    try {
+      if (status === "authenticated") {
+        const response = await fetch("/api/dailyok/snapshot", { method: "DELETE" });
+
+        if (!response.ok) {
+          throw new Error("server reset failed");
+        }
+      }
+
+      resetDietAppStorage({ syncServer: false });
+      setBodyWeightKgInput("55");
+      setWeightHistory([]);
+      setSelectedRange(7);
+      setSaveMessage("기록을 모두 초기화했어요.");
+      window.location.assign("/");
+    } catch {
+      setResettingRecords(false);
+      window.alert(
+        "서버 기록을 지우지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해주세요.",
+      );
+    }
   };
 
   return (
@@ -871,14 +891,15 @@ export default function ReportPage() {
         </p>
         <div className="mt-4">
           <Button
-            onClick={handleResetRecords}
+            onClick={() => void handleResetRecords()}
+            disabled={resettingRecords}
             className="w-full justify-center"
             style={{
               background: "linear-gradient(135deg,#ff9c88,#ff6f61)",
               color: "#fff8f4",
             }}
           >
-            기록 초기화
+            {resettingRecords ? "기록 지우는 중..." : "기록 초기화"}
           </Button>
         </div>
       </Card>

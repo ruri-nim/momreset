@@ -23,6 +23,7 @@ export const DIET_APP_STORAGE_KEYS = {
 } as const;
 
 let syncTimer: ReturnType<typeof setTimeout> | null = null;
+let syncAbortController: AbortController | null = null;
 
 function readStorage<T>(key: string, fallback: T): T {
   if (typeof window === "undefined") {
@@ -63,12 +64,17 @@ function queueServerSync() {
   }
 
   syncTimer = setTimeout(() => {
+    syncTimer = null;
+    const controller = new AbortController();
+    syncAbortController = controller;
+
     fetch("/api/dailyok/snapshot", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify(readSnapshotFromStorage()),
+      signal: controller.signal,
     })
       .then(async (response) => {
         if (!response.ok) {
@@ -86,8 +92,16 @@ function queueServerSync() {
         }
       })
       .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
         console.warn("Daily OK server sync skipped", error);
         // Guests or offline users can keep using local storage without interruption.
+      })
+      .finally(() => {
+        if (syncAbortController === controller) {
+          syncAbortController = null;
+        }
       });
   }, 300);
 }
@@ -213,10 +227,22 @@ export function saveOnboardingProfile(profile: OnboardingProfile) {
   writeStorage(DIET_APP_STORAGE_KEYS.onboardingProfile, profile);
 }
 
-export function resetDietAppStorage() {
+export function cancelPendingDietAppSync() {
+  if (syncTimer) {
+    clearTimeout(syncTimer);
+    syncTimer = null;
+  }
+
+  syncAbortController?.abort();
+  syncAbortController = null;
+}
+
+export function resetDietAppStorage(options?: { syncServer?: boolean }) {
   if (typeof window === "undefined") {
     return;
   }
+
+  cancelPendingDietAppSync();
 
   Object.values(DIET_APP_STORAGE_KEYS).forEach((key) => {
     window.localStorage.removeItem(key);
@@ -224,5 +250,8 @@ export function resetDietAppStorage() {
 
   window.localStorage.removeItem("food-list");
   window.dispatchEvent(new CustomEvent(DAILYOK_LOCAL_EVENT));
-  queueServerSync();
+
+  if (options?.syncServer !== false) {
+    queueServerSync();
+  }
 }

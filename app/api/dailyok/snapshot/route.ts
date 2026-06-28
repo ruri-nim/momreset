@@ -324,3 +324,36 @@ export async function POST(request: Request) {
     );
   }
 }
+
+export async function DELETE() {
+  try {
+    const session = await auth();
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ ok: false, authenticated: false }, { status: 401 });
+    }
+
+    if (!hasFirebaseAdminEnv()) {
+      return NextResponse.json({ ok: false, enabled: false }, { status: 503 });
+    }
+
+    const accountKey = getAccountKey(session.user.email);
+
+    if (!accountKey) {
+      return NextResponse.json({ ok: false }, { status: 400 });
+    }
+
+    const db = getFirebaseAdminDb();
+    await db.recursiveDelete(db.collection("users").doc(accountKey));
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error instanceof Error ? error.message : "snapshot reset failed",
+      },
+      { status: 500 },
+    );
+  }
+}

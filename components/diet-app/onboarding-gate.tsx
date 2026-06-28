@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { getProviders, signIn } from "next-auth/react";
+import { getProviders, signIn, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -68,6 +68,7 @@ function ChoiceChip({
 }
 
 export function OnboardingGate({ children }: { children: ReactNode }) {
+  const { status } = useSession();
   const [ready, setReady] = useState(false);
   const [completed, setCompleted] = useState(false);
   const [step, setStep] = useState(0);
@@ -543,19 +544,25 @@ export function OnboardingGate({ children }: { children: ReactNode }) {
                     </p>
 
                     <div className="mt-4 grid gap-3">
-                      {availableProviders.includes("google") ? (
+                      {status === "authenticated" ? (
+                        <Button className="w-full justify-center" onClick={handleGuestStart}>
+                          현재 Google 계정으로 시작하기
+                        </Button>
+                      ) : availableProviders.includes("google") ? (
                         <Button className="w-full justify-center" onClick={() => void handleSocialStart()}>
                           Google로 시작하기
                         </Button>
                       ) : null}
 
-                      <Button
-                        variant="ghost"
-                        className="w-full justify-center"
-                        onClick={handleGuestStart}
-                      >
-                        Guest로 시작하기
-                      </Button>
+                      {status !== "authenticated" ? (
+                        <Button
+                          variant="ghost"
+                          className="w-full justify-center"
+                          onClick={handleGuestStart}
+                        >
+                          Guest로 시작하기
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 </div>
