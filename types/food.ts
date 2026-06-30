@@ -9,6 +9,8 @@ export interface FoodSearchItem {
   carbs?: number;
   fat?: number;
   servingSize?: string;
+  suggestedServingGrams?: number;
+  suggestedServingLabel?: string;
   hydrationFriendly: boolean;
 }
 
