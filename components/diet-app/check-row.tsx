@@ -5,6 +5,7 @@ import type { RuleItem } from "@/types/diet-app";
 interface CheckRowProps {
   item: RuleItem;
   tone: "do" | "avoid";
+  onClick?: () => void;
   onChangeStatus?: (id: string, status: RuleItem["status"]) => void;
   onDelete?: (id: string) => void;
   showPendingAction?: boolean;
@@ -14,6 +15,7 @@ interface CheckRowProps {
 export function CheckRow({
   item,
   tone,
+  onClick,
   onChangeStatus,
   onDelete,
   showPendingAction = false,
@@ -31,7 +33,22 @@ export function CheckRow({
     );
 
   return (
-    <div className="rounded-[20px] border border-line/80 bg-white/70 px-3.5 py-3 sm:rounded-[22px] sm:px-4">
+    <div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (onClick && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      className={cn(
+        "rounded-[20px] border border-line/80 bg-white/70 px-3.5 py-3 sm:rounded-[22px] sm:px-4",
+        onClick &&
+          "cursor-pointer transition hover:-translate-y-0.5 hover:border-coral/60 hover:bg-[#fffdf5] hover:shadow-[0_12px_26px_rgba(255,126,111,0.14)] focus:outline-none focus:ring-2 focus:ring-coral/45",
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold leading-5 text-ink">{item.title}</p>
@@ -66,7 +83,10 @@ export function CheckRow({
         ) : onDelete ? (
           <button
             type="button"
-            onClick={() => onDelete(item.id)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete(item.id);
+            }}
             className="shrink-0 whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-muted transition"
           >
             삭제
@@ -77,7 +97,10 @@ export function CheckRow({
         <div className="mt-3 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:justify-end">
           <button
             type="button"
-            onClick={() => onChangeStatus(item.id, "done")}
+            onClick={(event) => {
+              event.stopPropagation();
+              onChangeStatus(item.id, "done");
+            }}
             className={cn(
               "whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition",
               item.status === "done"
@@ -94,7 +117,10 @@ export function CheckRow({
           </button>
           <button
             type="button"
-            onClick={() => onChangeStatus(item.id, "failed")}
+            onClick={(event) => {
+              event.stopPropagation();
+              onChangeStatus(item.id, "failed");
+            }}
             className={cn(
               "whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition",
               item.status === "failed"
@@ -112,7 +138,10 @@ export function CheckRow({
           {showPendingAction ? (
             <button
               type="button"
-              onClick={() => onChangeStatus(item.id, "pending")}
+              onClick={(event) => {
+                event.stopPropagation();
+                onChangeStatus(item.id, "pending");
+              }}
               className={cn(
                 "whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-semibold transition",
                 item.status === "pending"
@@ -126,7 +155,10 @@ export function CheckRow({
           {onDelete ? (
             <button
               type="button"
-              onClick={() => onDelete(item.id)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDelete(item.id);
+              }}
               className="col-span-2 whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 text-xs font-semibold text-muted transition sm:col-auto"
             >
               삭제
