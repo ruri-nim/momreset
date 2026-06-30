@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { AppShell } from "@/components/diet-app/app-shell";
 import { CheckRow } from "@/components/diet-app/check-row";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { getLocalDateKey } from "@/lib/diet-app-date";
+import {
+  formatMonthTitle,
+  getCurrentMonthMeta,
+  getLocalDateKey,
+} from "@/lib/diet-app-date";
 import {
   DAILYOK_LOCAL_EVENT,
   getRuleHistoryForDate,
@@ -47,6 +52,13 @@ function formatWeekLabel(date: Date) {
   return `${start.getMonth() + 1}월 ${start.getDate()}일 - ${end.getMonth() + 1}월 ${end.getDate()}일`;
 }
 
+const weekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
+
+interface SelectedRuleHistory {
+  rule: RuleItem;
+  type: "do" | "avoid";
+}
+
 export default function RulesPage() {
   const todayKey = getLocalDateKey();
   const [viewDateKey, setViewDateKey] = useState(todayKey);
@@ -63,6 +75,11 @@ export default function RulesPage() {
   const [foodList, setFoodList] = useState<DietFoodItem[]>([]);
   const [exerciseLogs, setExerciseLogs] = useState<ExerciseLogItem[]>([]);
   const [ruleHistory, setRuleHistory] = useState<RuleHistoryEntry[]>([]);
+  const [selectedRuleHistory, setSelectedRuleHistory] =
+    useState<SelectedRuleHistory | null>(null);
+  const [historyMonthDate, setHistoryMonthDate] = useState(
+    new Date(viewDate.getFullYear(), viewDate.getMonth(), 1),
+  );
   const isStatusEditor = isEmbedded;
 
   useEffect(() => {
@@ -211,6 +228,58 @@ export default function RulesPage() {
     (item) => !hasRuleTitle(doRules, item.title) && !hasRuleTitle(avoidRules, item.title),
   );
 
+  const selectedRuleStats = useMemo(() => {
+    if (!selectedRuleHistory) {
+      return { achieved: 0, recorded: 0 };
+    }
+
+    const statusKey =
+      selectedRuleHistory.type === "do" ? "doRuleStatuses" : "avoidRuleStatuses";
+    const statuses = ruleHistory
+      .map((entry) => entry[statusKey][selectedRuleHistory.rule.id])
+      .filter((status) => status === "done" || status === "failed");
+
+    return {
+      achieved: statuses.filter((status) => status === "done").length,
+      recorded: statuses.length,
+    };
+  }, [ruleHistory, selectedRuleHistory]);
+
+  const historyCalendarCells = useMemo(() => {
+    if (!selectedRuleHistory) {
+      return [];
+    }
+
+    const { year, month, firstWeekday, daysInMonth } =
+      getCurrentMonthMeta(historyMonthDate);
+    const statusKey =
+      selectedRuleHistory.type === "do" ? "doRuleStatuses" : "avoidRuleStatuses";
+    const historyByDate = new Map(ruleHistory.map((entry) => [entry.date, entry]));
+    const blanks = Array.from({ length: firstWeekday }, (_, index) => ({
+      key: `blank-${index}`,
+      day: null,
+      status: null,
+    }));
+    const days = Array.from({ length: daysInMonth }, (_, index) => {
+      const day = index + 1;
+      const dateKey = `${year}-${`${month + 1}`.padStart(2, "0")}-${`${day}`.padStart(2, "0")}`;
+      const entry = historyByDate.get(dateKey);
+
+      return {
+        key: dateKey,
+        day,
+        status: entry?.[statusKey][selectedRuleHistory.rule.id] ?? null,
+      };
+    });
+
+    return [...blanks, ...days];
+  }, [historyMonthDate, ruleHistory, selectedRuleHistory]);
+
+  const openRuleHistory = (rule: RuleItem, type: "do" | "avoid") => {
+    setHistoryMonthDate(new Date(viewDate.getFullYear(), viewDate.getMonth(), 1));
+    setSelectedRuleHistory({ rule, type });
+  };
+
   return (
     <AppShell
       eyebrow="Weekly rules"
@@ -262,6 +331,7 @@ export default function RulesPage() {
               key={item.id}
               item={item}
               tone="do"
+              onClick={!isStatusEditor ? () => openRuleHistory(item, "do") : undefined}
               onChangeStatus={
                 isStatusEditor
                   ? (id, status) => updateRuleStatus("do", id, status)
@@ -300,6 +370,7 @@ export default function RulesPage() {
               key={item.id}
               item={item}
               tone="avoid"
+              onClick={!isStatusEditor ? () => openRuleHistory(item, "avoid") : undefined}
               onChangeStatus={
                 isStatusEditor
                   ? (id, status) => updateRuleStatus("avoid", id, status)
@@ -459,6 +530,132 @@ export default function RulesPage() {
           <Button onClick={addRule} className="w-full">
             저장하기
           </Button>
+        </div>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(selectedRuleHistory)}
+        onClose={() => setSelectedRuleHistory(null)}
+        title={selectedRuleHistory?.rule.title ?? "규칙 기록"}
+        description="내가 이 규칙을 지킨 날을 O와 X 스티커로 모아봤어요."
+        className="max-w-[620px]"
+        panelStyle={{
+          background:
+            "linear-gradient(155deg, rgba(255,253,241,0.99), rgba(255,247,191,0.98))",
+          border: "2px solid rgba(255, 157, 139, 0.45)",
+        }}
+      >
+        <div className="space-y-4">
+          <div className="relative overflow-hidden rounded-[24px] border border-line/70 bg-white/75 p-4">
+            <span className="absolute -right-3 -top-4 rotate-12 text-5xl opacity-20">
+              {selectedRuleHistory?.type === "do" ? "🍀" : "🛡️"}
+            </span>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-muted">
+              My rule score
+            </p>
+            <div className="mt-3 flex items-end gap-2">
+              <strong className="text-4xl font-black leading-none text-ink">
+                {selectedRuleStats.achieved}일
+              </strong>
+              <span className="pb-1 text-base font-bold text-muted">
+                / 총 {selectedRuleStats.recorded}일
+              </span>
+            </div>
+            <p className="mt-2 break-keep text-sm leading-6 text-muted">
+              성공 또는 실패로 체크한 날짜만 모아서 보여드려요.
+            </p>
+          </div>
+
+          <div className="rounded-[26px] border border-line/75 bg-[#fffdf5]/90 p-3.5 sm:p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <button
+                type="button"
+                aria-label="이전 달"
+                onClick={() =>
+                  setHistoryMonthDate(
+                    (current) =>
+                      new Date(current.getFullYear(), current.getMonth() - 1, 1),
+                  )
+                }
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line/80 bg-white text-ink transition hover:-rotate-6 hover:bg-[#fff4ad]"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <div className="text-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted">
+                  O X Calendar
+                </p>
+                <h4 className="mt-1 whitespace-nowrap text-xl font-black text-ink">
+                  {formatMonthTitle(historyMonthDate)}
+                </h4>
+              </div>
+              <button
+                type="button"
+                aria-label="다음 달"
+                onClick={() =>
+                  setHistoryMonthDate(
+                    (current) =>
+                      new Date(current.getFullYear(), current.getMonth() + 1, 1),
+                  )
+                }
+                className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line/80 bg-white text-ink transition hover:rotate-6 hover:bg-[#fff4ad]"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+              {weekdayLabels.map((label) => (
+                <div
+                  key={label}
+                  className="pb-1 text-center text-[11px] font-black text-muted"
+                >
+                  {label}
+                </div>
+              ))}
+              {historyCalendarCells.map((cell) =>
+                cell.day ? (
+                  <div
+                    key={cell.key}
+                    className={[
+                      "relative flex aspect-square min-w-0 flex-col items-center justify-center rounded-[14px] border text-center sm:rounded-[18px]",
+                      cell.status === "done"
+                        ? "rotate-[-2deg] border-[#7ed6a4] bg-[#c9f3d7] shadow-[0_6px_12px_rgba(72,187,120,0.16)]"
+                        : cell.status === "failed"
+                          ? "rotate-[2deg] border-[#ff9c91] bg-[#ffd7cf] shadow-[0_6px_12px_rgba(255,112,99,0.13)]"
+                          : "border-line/45 bg-white/65",
+                    ].join(" ")}
+                  >
+                    <span className="absolute left-1.5 top-1 text-[9px] font-bold text-muted sm:left-2 sm:top-1.5">
+                      {cell.day}
+                    </span>
+                    {cell.status === "done" ? (
+                      <span className="text-xl font-black text-emerald-700 sm:text-2xl">
+                        O
+                      </span>
+                    ) : cell.status === "failed" ? (
+                      <span className="text-xl font-black text-rose-600 sm:text-2xl">
+                        X
+                      </span>
+                    ) : (
+                      <span className="text-sm font-bold text-line">·</span>
+                    )}
+                  </div>
+                ) : (
+                  <div key={cell.key} aria-hidden="true" className="aspect-square" />
+                ),
+              )}
+            </div>
+
+            <div className="mt-4 flex flex-wrap justify-center gap-2 text-xs font-bold">
+              <span className="rounded-full bg-[#c9f3d7] px-3 py-1.5 text-emerald-700">
+                O 지켰어요
+              </span>
+              <span className="rounded-full bg-[#ffd7cf] px-3 py-1.5 text-rose-600">
+                X 놓쳤어요
+              </span>
+            </div>
+          </div>
         </div>
       </Dialog>
     </AppShell>
